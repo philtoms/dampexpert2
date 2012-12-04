@@ -1,11 +1,10 @@
-product = null
+fake = require "injectr"
+product = fake "tests/product.coffee",
+  fs1: (x) -> x+x
 
 describe "creating a new product", ->
 
   beforeEach ->
-    product = 
-      id: 1
-      name: "p1"
     console.log product
       
   it "should have an id", ->

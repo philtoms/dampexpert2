@@ -1,13 +1,5 @@
-jasmine = require('jasmine-node')
+fs = require "fs1"
 
-product = {}
-
-describe "creating a new product", ->
-
-  beforeEach ->
-    product = 
-      id: 1
-      name: "p1"
-      
-  it "should have an id", ->
-    expect(product.id).toBe "p1"
+module.exports = 
+  id: 1
+  name: fs "p1"
