@@ -1,0 +1,6 @@
+test - run in app forlder
+  jasmine-node --autotest --test-dir ..\app --coffee
+  
+  Only reexecutes changed (or failing) tests, so test needs to 
+  change before it will run. Especually true when it is passing and
+  sut changes.
