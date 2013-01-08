@@ -1,6 +1,6 @@
 @extend = controller:->
   @get -> 
   @member = ->
-    @member = "member"
+    @members = true
     return this
   return this

@@ -1,94 +1,114 @@
+path = require "path"
 injectr = require "injectr"
 getSpy = createSpy()
 listenSpy = createSpy()
 mvz = injectr "./lib/mvz.coffee", 
-  zappa: app: (fn) ->
-          return {
-            app:{
-             listen: listenSpy
-             address:->
-             settings:env:{}
-            }
-            root: __dirname
-            get: getSpy
-            log: (x) -> console.log x
-          }
-          
-mvzSut = null
-mvz 80, -> mvzSut = this
+  {'zappajs':
+    run: (p,fn) ->
+      fn.call {get:getSpy}
+  },
+  {
+    console:console
+    module:parent:filename:path.join(__dirname,"/include.spec.coffee")
+  }
 
-describe "initialized mvz", ->
+sut = mvz 3001, ->
+
+describe "extensions registered at base", ->
+  result = null
+  beforeEach ->
+    tsut = mvz 1,->
+    tsut.extend extension: createSpy("extension")
+    result = tsut.extend -> return this
+
+  it "should be included in the extended object", ->
+    expect(result.extension).toBeDefined()
   
-  it "should be listening on expected port", ->
-    expect(listenSpy.argsForCall[0][0]).toEqual(80)
+  it "should not have been called through extension", ->
+    expect(result.extension).not.toHaveBeenCalled()
   
-describe "extended controller", ->
+describe "including an extension module", ->
+  result = null
+  beforeEach ->
+    result = sut.include "includeextension"
+  
+  it "should have called extend on the extension in extension context", ->
+    expect(result.extended).toBeDefined()
+    expect(sut.extended).not.toBeDefined()
+  
+  it "should have added base extension methods to the extension", ->
+    expect(result.extend).toBeDefined()
+    
+describe "including a zappa module", ->
+  result = null
+  beforeEach ->
+    spyOn(sut,"extend")
+    sut.include "includezappa"
+  
+  it "should not have called extend", ->
+    expect(sut.extend).not.toHaveBeenCalled()   
+  
+  it "should have called include on the module in sut context", ->
+    expect(sut.included).toBeDefined()
+  
+describe "extending the controller", ->
   result = null
   beforeEach ->
     getSpy.reset()
-    result = mvzSut.include "../tests/includetest"
+    result = sut.include "extendcontroller"
   
   it "should have established a default route", ->
-    expect(result.route).toEqual("includetest")
+    expect(result.route).toEqual("extendcontroller")
     
-  it "should have extended zappa route verbs", ->
+  it "should have added base extension methods to the extension", ->
+    expect(result.extend).toBeDefined()
+    
+  it "should have added controller extension methods to the extension", ->
     expect(result.get).toBeDefined()
-    expect(result.put).toBeDefined()
-    expect(result.post).toBeDefined()
-    expect(result.del).toBeDefined()
-
+    
   it "should have registered a default route handler", ->
     expect(typeof getSpy.argsForCall[0][1]).toEqual('function')
 
-  it "should have added zappa to new cotroller", ->
+  it "should have added zappa to new controller", ->
     expect(result.app).toBeDefined()
 
 describe "further extension of extended controller", ->
   result = null
   beforeEach ->
-    base = mvzSut.include "../tests/includetest"
-    result = base.extend (-> return this), "extended"
+    base = sut.include "extendcontroller"
+    result = base.include "extendcontroller"
   
-  it "should have inherited include method", ->
-    expect(result.include).toBeDefined()
-
-  it "should have extended zappa route verbs", ->
-    expect(result.get).toBeDefined()
-    expect(result.put).toBeDefined()
-    expect(result.post).toBeDefined()
-    expect(result.del).toBeDefined()
-
   it "should have established a default subroute", ->
-    expect(result.route).toEqual("includetest/extended")
+    expect(result.route).toEqual("extendcontroller/extendcontroller")
     
-describe "further extension of extension on same route", ->
+describe "further extension of extended controller on same route", ->
   result = null
   beforeEach ->
-    base = mvzSut.include "../tests/includetest"
+    base = sut.include "extendcontroller"
     result = base.extend -> return this
   
   it "should not have established a new default route", ->
-    expect(result.route).toEqual("includetest")
+    expect(result.route).toEqual("extendcontroller")
     
-describe "extension of a member", ->
+describe "extending an object member", ->
   result = null
   beforeEach ->
-    base = mvzSut.include "../tests/includetest"
+    base = sut.include "extendcontroller"
     result = base.extend "member":-> return this
   
-  it "should have inherited include method", ->
+  it "should have inherited base methods", ->
     expect(result.include).toBeDefined()
 
-  it "should have inherited base member", ->
-    expect(result.member).toEqual("member")
+  it "should have inherited base member members", ->
+    expect(result.members).toBeDefined()
 
-describe "override of extension member", ->
+describe "overriding an object member", ->
   result = null
   beforeEach ->
-    base = mvzSut.include "../tests/includetest"
+    base = sut.include "extendcontroller"
     result = base.extend "member":-> 
-      @member="member1"
+      @members="member1"
       return this
   
   it "should have overriden inherited base member", ->
-    expect(result.member).toEqual("member1")
+    expect(result.members).toEqual("member1")
