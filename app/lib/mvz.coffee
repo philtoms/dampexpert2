@@ -2,7 +2,7 @@ fs = require "fs"
 path = require "path"
 zappa = require ('zappajs')
 
-mvz = ->
+mvz = (ready) ->
 
   @version = '0.1.1'
   
@@ -54,11 +54,21 @@ mvz = ->
       # register new extension
       extensions[k] = v
       
+      # special case?
+      if k=='log' then @[k]=v
+      
   # go
-  mvz.app.call(this)
+  ready.call this
 
   return this
 
 module.exports = (port,app) -> 
-  mvz.app = app
-  zappa.run port, mvz
+  # wire-up mvz and the app into zappa context and start app when ready
+  zappa.app -> 
+    zapp = this
+    mvz.call zapp,->
+      app.call zapp, ->
+        zapp.server.listen port || 3000
+        zapp.log = zapp.log || console.log
+        zapp.log 'Express server listening on port %d in %s mode',
+          zapp.server.address()?.port, zapp.app.settings.env

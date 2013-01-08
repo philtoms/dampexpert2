@@ -1,19 +1,36 @@
 path = require "path"
 injectr = require "injectr"
-getSpy = createSpy()
-listenSpy = createSpy()
+logSpy = createSpy("log")
+getSpy = createSpy("get")
+listenSpy = createSpy("listen")
 mvz = injectr "./lib/mvz.coffee", 
   {'zappajs':
-    run: (p,fn) ->
-      fn.call {get:getSpy}
+    app: (fn) ->
+      fn.call {
+        get:getSpy
+        server:
+          listen:listenSpy
+          address:->
+        app:settings:env:'test'
+      }
   },
   {
     console:console
     module:parent:filename:path.join(__dirname,"/include.spec.coffee")
   }
 
-sut = mvz 3001, ->
+sut = mvz 3001, (ready) ->
+  @extend log:logSpy
+  ready()
 
+describe "application intitailization", ->
+
+  it "should listen on expected port", ->
+    expect(listenSpy).toHaveBeenCalledWith(3001)
+  
+  it "should have included application extensions", ->
+    expect(logSpy).toHaveBeenCalled()
+  
 describe "extensions registered at base", ->
   result = null
   beforeEach ->
