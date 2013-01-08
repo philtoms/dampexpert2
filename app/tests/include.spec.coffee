@@ -21,22 +21,21 @@ mvz = injectr "./lib/mvz.coffee",
 
 sut = mvz 3001, (ready) ->
   @extend log:logSpy
+  @extend extension:createSpy("extension")
   ready()
 
-describe "application intitailization", ->
+describe "application intitialization", ->
 
   it "should listen on expected port", ->
     expect(listenSpy).toHaveBeenCalledWith(3001)
   
-  it "should have included application extensions", ->
-    expect(logSpy).toHaveBeenCalled()
+  it "should have added logging extension to base", ->
+    expect(sut.log).toHaveBeenCalled()
   
 describe "extensions registered at base", ->
   result = null
   beforeEach ->
-    tsut = mvz 1,->
-    tsut.extend extension: createSpy("extension")
-    result = tsut.extend -> return this
+    result = sut.extend -> return this
 
   it "should be included in the extended object", ->
     expect(result.extension).toBeDefined()
@@ -89,7 +88,7 @@ describe "extending the controller", ->
   it "should have added zappa to new controller", ->
     expect(result.app).toBeDefined()
 
-describe "further extension of extended controller", ->
+describe "further extending an extension", ->
   result = null
   beforeEach ->
     base = sut.include "extendcontroller"
@@ -98,7 +97,7 @@ describe "further extension of extended controller", ->
   it "should have established a default subroute", ->
     expect(result.route).toEqual("extendcontroller/extendcontroller")
     
-describe "further extension of extended controller on same route", ->
+describe "further extending an extension on the same route", ->
   result = null
   beforeEach ->
     base = sut.include "extendcontroller"
