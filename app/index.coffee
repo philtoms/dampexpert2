@@ -1,8 +1,7 @@
-dampexpert2 = require './lib/mvz' 3001, ->
+dampexpert2 = require './lib/mvz' 3001, (ready) ->
 
-  @extend 
-    logger: require 'winston'
-    repo: require './repository'
+  @extend log: require ('winston').log
+  @extend repo: require './repository'
   
   @registerRoutes [
         'Home:index'
@@ -13,5 +12,6 @@ dampexpert2 = require './lib/mvz' 3001, ->
         'Admin:admin'
       ]
 
+  ready()
   
 module.exports = dampexpert2

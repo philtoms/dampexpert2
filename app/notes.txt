@@ -1,0 +1,76 @@
+MVZ is an opinionated MVC framework inspired by and build upon the fabulous zappaja - node development for the lazy. 
+
+For a start, there aren't too many new keywords to learn (you only absolutely need one), and most of the smoke and 
+mirrors is supplied by convention:
+  MVZ = MVC
+    m = /models
+    v = /views
+    c = /controllers
+
+MVZ wires up what it finds in these folders and fills in where it doesn't. Program overrides are just where the app
+gets interesting.
+
+Getting started means creating a new context and signalling app.ready:
+
+  require 'mvz' (ready) ->
+    @extend logger:require 'winston'    
+    ready()
+    
+Controllers are zappa modules with a modified signature:
+
+  // controllers/mainpage.coffee
+  @extend = controller: -> return this
+
+Views are provided by zappa so choose your favorite engine:
+
+  // views/mainpage.jade
+  div {name}
+
+Models return data when asked
+
+  // models/mainpage.coffee
+  @extend = model: ->
+    name:'fred'
+
+Now route to http://yoursite/mainpage
+
+Of course all of this can be declared inline zappa style if you don't want to spread your components too wide:
+
+  require 'mvz' (ready) ->
+    @extend controller: ->
+    
+      @model -> name:'jean'
+      @view 
+        div name
+    
+      return this
+
+    ready()
+
+MVZ controllers are pretty standard except that they can be nested in a hierarchy so that a page controller may contain and defer to several sub-page controllers
+
+//mainpage.coffee
+@extend = controller: ->
+  @include 'header'
+  @include 'section1'
+  @include 'section2'
+  @include 'footer'
+  
+  @render {
+    title:'main'
+    sections:['section 1','section 2']
+    version:'1.0.0.1'
+  }
+  
+In this way the responsibility for generating a page response is shared between a composable collection of reusable components. 
+The header and footer controllers are a bit unusual in that these responsibilities are usually undertaken by the view template 
+interpolating appropriate sections of the model. By providing their own controllers, MVZ has a consistent way to 
+
+Registering routes
+
+By default MVZ registers routes to controller actions using path / name matching. 
+All you need to do is put your contoller files in the controllers folder for MVZ to find and route to them by simple path / name matching:
+
+  url route = 'http://yoursite/yourpage' will be registered to controllers/yourpage.coffee
+
+You can explicitly register controller routes with @registerRoutes []. This allows you to set an alias such as Home:index

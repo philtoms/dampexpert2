@@ -7,11 +7,11 @@
       @where v -> v.isShowcased,
       @take count
 
-  @get = ->
+  @get ->
     # will render on promise
     @render(showcase @repo.fetch,10)
   
-  @post = ids ->
+  @post (ids) ->
     # create uow in session scope
     @repo.session ->
 
@@ -23,7 +23,7 @@
           data.each p ->
             p.isShowcased=true
     
-  @put = updated ->
+  @put (updated) ->
     # use immediate uow
     @repo.fetch updated.id, v -> 
         v.isShowcased=updated.isShowcased

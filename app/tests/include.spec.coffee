@@ -7,11 +7,14 @@ mvz = injectr "./lib/mvz.coffee",
   {'zappajs':
     app: (fn) ->
       fn.call {
+        all:->
         get:getSpy
         server:
           listen:listenSpy
           address:->
-        app:settings:env:'test'
+        app:
+          set:->
+          settings:env:'test'
       }
   },
   {
@@ -72,9 +75,9 @@ describe "extending the controller", ->
   beforeEach ->
     getSpy.reset()
     result = sut.include "extendcontroller"
-  
+
   it "should have established a default route", ->
-    expect(result.route).toEqual("extendcontroller")
+    expect(result.route).toEqual("/extendcontroller")
     
   it "should have added base extension methods to the extension", ->
     expect(result.extend).toBeDefined()
@@ -95,7 +98,7 @@ describe "further extending an extension", ->
     result = base.include "extendcontroller"
   
   it "should have established a default subroute", ->
-    expect(result.route).toEqual("extendcontroller/extendcontroller")
+    expect(result.route).toEqual("/extendcontroller/extendcontroller")
     
 describe "further extending an extension on the same route", ->
   result = null
@@ -104,7 +107,7 @@ describe "further extending an extension on the same route", ->
     result = base.extend -> return this
   
   it "should not have established a new default route", ->
-    expect(result.route).toEqual("extendcontroller")
+    expect(result.route).toEqual("/extendcontroller")
     
 describe "extending an object member", ->
   result = null
