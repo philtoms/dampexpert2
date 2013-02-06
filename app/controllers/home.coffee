@@ -4,4 +4,6 @@
   @include 'main' # placeholder
   @include 'footer' 
 
-  @get '/': -> @render()
+  @index ->
+    
+    @render()

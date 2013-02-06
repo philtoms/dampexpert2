@@ -1,6 +1,0 @@
-ul#products
-  li.product#{id}
-    img(src='',alt='{soaname}')
-    h3 {name}
-    span {desc}
-    

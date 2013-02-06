@@ -17,7 +17,7 @@ mvz = (ready) ->
     name = @params[0].split('/')[1]
     route = '/'+ name
     if not routes[route] then m = base.include route
-    # model found so build controller
+    # model found but no controller so build one
     if typeof m is 'function'
       do (name) ->
         ctrlr = base.extend {controller:->return this}, route

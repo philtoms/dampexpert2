@@ -8,14 +8,31 @@ mirrors is supplied by convention:
     c = /controllers
 
 MVZ wires up what it finds in these folders and fills in where it doesn't. Program overrides are just where the app
-gets interesting.
+starts to get interesting.
 
-Getting started means creating a new context and signalling app.ready:
+Create a new context and signal app.ready:
 
   require 'mvz' (ready) ->
-    @extend logger:require 'winston'    
+    @extend logger:require 'winston'
     ready()
-    
+
+Add a model - it needs to return data when mvz calls its constructor
+
+  // models/model.coffee
+  module.exports = -> { 
+    id:1
+    title:'simply MVZ'
+    description:'Hello MVZ user'
+  }
+
+Now route to http://yoursite/model
+
+Where's the controller? Where's the view? What's the point of all of this? The M in MVC stands for
+model, but only in the most trivial examples would it be able to stand in for the business / domain model part 
+of your application. MVC is about seperation of concerns, MVZ allows you to write these
+concerns independently of each other, and where it is appropriate to map concerns onto 
+one another by name.
+
 Controllers are zappa modules with a modified signature:
 
   // controllers/mainpage.coffee
@@ -37,6 +54,7 @@ Now route to http://yoursite/mainpage
 Of course all of this can be declared inline zappa style if you don't want to spread your components too wide:
 
   require 'mvz' (ready) ->
+
     @extend controller: ->
     
       @model -> name:'jean'
@@ -46,6 +64,54 @@ Of course all of this can be declared inline zappa style if you don't want to sp
       return this
 
     ready()
+
+What's happening here? MVZ routes url requests to controllers which then act as mediators between 
+models and views. 
+The views are provided by Zappa so most view engines are compatible. 
+To the interesting stuff - how much new code should an app provide? Well, MVZ = MVC so lets take a closer look 
+at what the controller is set up to do - route. The controller's default action is to route GET/PUT/POST/DELETE 
+requests to the model and then through to the appropriate view. Zappa underlies the controller so simply calling 
+the appropriate verb handler results in the familiar express patterns:
+
+  @extend controller: ->
+    @get -> @render model
+    @get '/:id': -> @render model.parts(@params.id)
+    @post -> model.parts.push(@params)
+
+ But MVC has its own familiar patterns and lends itslf to restful routing:
+
+  request          action   model                 view
+  GET     /page    index    query name:page       page {name:'fred'}
+  GET     /page/1  show     query name:page,id:1  page/1 {}
+  POST    /page    create   store name:           page
+  PUT     /page    update
+  DELETE  /page    destroy
+
+Which leads to an nice implementation of the responsibility seperation that MVC was designed to address. 
+However, MVC and routing particularly has become has becis is express style verb handlers are created The actions all exist on the controller object and can be overriden, but because it is all so CRUDy, the default controller
+is in a good position to handle the requests directly - so long as it can map each request onto an appropriate repository command:
+
+  @index = -> return model
+  @show = (id) -> return model.parts[id]
+  @create = (p) -> model.parts[p.id]=p
+  @update = (id,p) -> model.parts[id]=p
+  
+ transforming the request into a query command and passing this onto the model. The model
+is where it gets interesting. 
+
+  // models/page.coffee
+  
+
+
+  
+First off, its primary purpose is to route incomming urls to actions. Get '/' we have already seen
+
+  // controllers/singlepage.coffee
+  @extend = controller: -> 
+  
+    @get ':/id': ->
+    return this
+
 
 MVZ controllers are pretty standard except that they can be nested in a hierarchy so that a page controller may contain and defer to several sub-page controllers
 
