@@ -1,15 +1,20 @@
 require('zappajs') ->
 
   @include '../lib/wscqrs'
+  @include '../lib/eventsource'
 
   @get '/': ->
     @render index: {layout: no}
      
   # model
+  _on = @on
+  @on = (obj) ->
+    _on obj
+    
   @on command: ->
     msg = "command #{@data.text} handled!"
     console.log msg
-    @publish event: @data
+    @publish event: "bought!"
     
   @on event : ->
     msg = "event #{@data.text} handled!"
@@ -21,7 +26,7 @@ require('zappajs') ->
     $ =>
 
       @on event: ->
-        $('#panel').append "<p>event: #{@data.text} received</p>"
+        $('#panel').append "<p>event: #{@data} received</p>"
 
       @emit "command", {text: 'buy ultrovent'}, (r) ->
         $('#panel').append "<p>#{r.message} submitted at #{r.time}</p>"
