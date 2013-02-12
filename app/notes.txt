@@ -1,14 +1,10 @@
 MVZ is an opinionated MVC framework inspired by and build upon the fabulous zappaja - node development for the lazy. 
 
-For a start, there aren't too many new keywords to learn (you only absolutely need one), and most of the smoke and 
-mirrors is supplied by convention:
-  MVZ = MVC
-    m = /models
-    v = /views
-    c = /controllers
-
-MVZ wires up what it finds in these folders and fills in where it doesn't. Program overrides are just where the app
-starts to get interesting.
+Its mostly smoke and mirrors filled in by convention:
+  MVZ = 
+    /models
+    /views
+    /controllers (zappa'd)
 
 Create a new context and signal app.ready:
 
@@ -38,12 +34,12 @@ Controllers are zappa modules with a modified signature:
   // controllers/mainpage.coffee
   @extend = controller: -> return this
 
-Views are provided by zappa so choose your favorite engine:
+Views are powered by zappa so choose your favorite engine:
 
   // views/mainpage.jade
   div {name}
 
-Models return data when asked
+Models return data and listen for commands
 
   // models/mainpage.coffee
   @extend = model: ->
@@ -51,13 +47,14 @@ Models return data when asked
 
 Now route to http://yoursite/mainpage
 
-Of course all of this can be declared inline zappa style if you don't want to spread your components too wide:
+Or in zappa-speak, inline MVC
 
   require 'mvz' (ready) ->
 
     @extend controller: ->
     
       @model -> name:'jean'
+
       @view 
         div name
     

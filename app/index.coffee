@@ -1,7 +1,7 @@
 dampexpert2 = require './lib/mvz' 3001, (ready) ->
 
   @extend log: require ('winston').log
-  @extend repo: require './repository'
+  @extend repo: require ('./repository')
   
   @registerRoutes [
         'Home:index'

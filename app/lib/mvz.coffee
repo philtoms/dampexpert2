@@ -1,6 +1,6 @@
-fs = require "fs"
-path = require "path"
-zappa = require ('zappajs')
+fs = require('fs')
+path = require('path')
+zappa = require('zappajs')
 
 mvz = (ready) ->
 
@@ -52,7 +52,7 @@ mvz = (ready) ->
           else
             base[verb] @route+args[0], args[1]
 
-    # all controllers are registered as routes    
+    # all controllers are registered as route handlers
     if @route.indexOf('/')!=0 then @route='/'+@route
     routes[@route] = {controller:this.constructor,filepath:filepath}
 
@@ -60,6 +60,14 @@ mvz = (ready) ->
     @model = base.include @includepath, ["models"]
     return this
     
+  extensions['model'] = (filepath,route) ->
+    name = if filepath? then path.basename(filepath,'.coffee') else ''
+    
+    if route? && name then name='/'+name
+    @route = @includepath = if route? then route+name else name
+    
+    
+
   @include = extensions['include'] = (p,folders) ->
     for folder in folders || ['','controllers','models']
       try
