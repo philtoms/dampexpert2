@@ -1,6 +1,6 @@
 require('zappajs') ->
 
-  @include '../lib/wsrouter'
+  @include '../lib/wscqrs'
 
   @get '/': ->
     @render index: {layout: no}
