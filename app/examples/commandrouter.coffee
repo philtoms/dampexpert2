@@ -17,7 +17,11 @@ require('zappajs') ->
     @publish event: "bought!"
     
   @on event : ->
-    msg = "event #{@data.text} handled!"
+    msg = "event #{@data} handled!"
+    console.log msg
+    
+  @on event : ->
+    msg = "event #{@data} handled again!"
     console.log msg
     
   @client '/index.js': ->

@@ -2,12 +2,12 @@ path = require "path"
 injectr = require "injectr"
 allSpy = createSpy("all")
 getSpy = createSpy("get")
-mvz = injectr "./lib/mvz.coffee", 
+mvz = injectr "./lib/mvz.js", 
   {'model':
     ->
    'zappajs':
     app: (fn) ->
-      fn.call {
+      fn.call { 
         all:allSpy
         get:getSpy
         server:

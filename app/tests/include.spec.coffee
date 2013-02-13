@@ -2,7 +2,7 @@ path = require "path"
 injectr = require "injectr"
 logSpy = createSpy("log")
 listenSpy = createSpy("listen")
-mvz = injectr "./lib/mvz.coffee", 
+mvz = injectr "./lib/mvz.js",  
   {'zappajs':
     app: (fn) ->
       fn.call {

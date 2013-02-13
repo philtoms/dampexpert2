@@ -1,7 +1,7 @@
 path = require "path"
 injectr = require "injectr"
 getSpy = createSpy("get")
-mvz = injectr "./lib/mvz.coffee", 
+mvz = injectr "./lib/mvz.js", 
   {'zappajs':
     app: (fn) ->
       fn.call {
