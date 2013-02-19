@@ -9,6 +9,7 @@ mvz = (ready) ->
   root = path.dirname(module.parent.filename)
   base = this
   base.app.set("views",path.join(root,"views"))
+  
   routes = {}
   extensions = app:base
   
@@ -65,27 +66,25 @@ mvz = (ready) ->
     
     if route? && name then name='/'+name
     @route = @includepath = if route? then route+name else name
-    
-    
 
-  @include = extensions['include'] = (p,folders) ->
+  @include = extensions['include'] = (name,folders) ->
     for folder in folders || ['','controllers','models']
       try
-        sub = require path.join(root, folder, p)
+        sub = require path.join(root, folder, name)
         if sub.extend
-          return @extend sub.extend, p
+          @extend sub.extend, name
         if sub.include
           sub.include.apply(base, [base])
         return sub
       catch ex
         base.log ex
 
-  @extend = extensions['extend'] = (obj,include) ->
+  @extend = extensions['extend'] = (obj,includeName) ->
     if typeof obj is 'function' then obj = constructor:obj
     for k,v of obj 
       _super = @[k] || routes[k]?.controller || extensions[k]
       if _super
-        extension = v.call new _super(include,@includepath)
+        extension = v.call new _super(includeName,@includepath)
         if typeof extension isnt 'object'
           throw "extension of #{k} must return object"
           
@@ -101,7 +100,7 @@ mvz = (ready) ->
       if k=='log' then @[k]=v
       
   # go
-  ready.call this
+  ready.apply this
 
   return this
 
@@ -109,9 +108,9 @@ module.exports = (port,app) ->
   # wire-up mvz and the app into zappa context and start app when ready
   zappa.app -> 
     zapp = this
-    mvz.call zapp,->
-      app.call zapp, ->
+    mvz.call zapp, ready = ->
+      app.call zapp, ready = ->
         zapp.server.listen port || 3000
-        zapp.log = zapp.log || console.log
+        zapp.log = zapp.log || ->
         zapp.log 'Express server listening on port %d in %s mode',
           zapp.server.address()?.port, zapp.app.settings.env

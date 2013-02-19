@@ -1,5 +1,5 @@
-@extend = home:->
+@extend = default:->
 
   # overwrite main with productlist
-  @main = @include 'productlist'
+  @include main:'productlist'
   

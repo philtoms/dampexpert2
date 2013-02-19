@@ -1,3 +1,6 @@
+nested controllers - doesn't depend on file / folder heirarchy, and allos sub components to be reused
+extensions are registered through the @extend method - they must return this to register
+
 MVZ is an opinionated MVC framework inspired by and build upon the fabulous zappaja - node development for the lazy. 
 
 Its mostly smoke and mirrors filled in by convention:
