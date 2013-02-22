@@ -28,6 +28,7 @@ mvz = injectr "./lib/mvz.js",
 sut = null
 mvz 3001, (ready) ->
   sut = this
+  sut.ctx = createSpy("ctx")
   if not listenSpy.callCount then notReadySpy()
   ready()
 
@@ -50,14 +51,25 @@ describe "ready application", ->
 describe "included zappa modules", ->
 
   beforeEach ->
+    getSpy.reset()
     spyOn(sut,"include").andCallThrough()
     sut.include './includes/includezappa'
     
-  it "should be in mvz context with immediate access to zappa members", ->
+  it "should be in mvz context with immediate access to mvz members", ->
+    expect(sut.ctx).toHaveBeenCalledWith(sut)
+  
+  it "should have immediate access to zappa members", ->
     expect(sut.get.callCount).toEqual(1)
  
+describe "nested included zappa modules", ->
+
+  beforeEach ->
+    getSpy.reset()
+    spyOn(sut,"include").andCallThrough()
+    sut.include './includes/includenested'
+    
   it "should be in mvz context with immediate access to mvz members", ->
-    expect(sut.include.callCount).toEqual(2)
+    expect(sut.ctx).toHaveBeenCalledWith(sut)
   
 describe "included override modules", ->
   result = null

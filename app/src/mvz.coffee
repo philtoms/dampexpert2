@@ -81,7 +81,7 @@ mvz = (ready) ->
       if typeof sub.include is 'object'
         return @extend sub.include, name
       else
-        return sub.include.apply(base, [base])
+        return sub.include.apply(this, [this])
 
   @extend = (obj,includeName) ->
     if typeof obj is 'function' then obj = constructor:obj

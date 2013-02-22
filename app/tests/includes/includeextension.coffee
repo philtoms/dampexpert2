@@ -1,3 +1,3 @@
 @include = 'controller':->
   @get 'x':->
-  return this
+  @ctx this

@@ -115,7 +115,7 @@
         if (typeof sub.include === 'object') {
           return this.extend(sub.include, name);
         } else {
-          return sub.include.apply(base, [base]);
+          return sub.include.apply(this, [this]);
         }
       }
     };
