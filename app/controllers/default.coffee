@@ -1,4 +1,4 @@
-@extend = controller: ->
+@include = controller: ->
 
   @include 'header'
   @include 'main' # placeholder

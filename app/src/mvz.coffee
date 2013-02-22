@@ -11,7 +11,7 @@ mvz = (ready) ->
   base.app.set("views",path.join(root,"views"))
   
   routes = {}
-  extensions = app:base
+  extensions = {} # app:base
   
   base.all "*?*":->
     # auto register the route
@@ -21,11 +21,12 @@ mvz = (ready) ->
     # model found but no controller so build one
     if typeof m is 'function'
       do (name) ->
-        ctrlr = base.extend {controller:->return this}, route
+        base.extend {controller:->
+          @get ->
+            view[name]=@model()
+          @ render view
+        }, route
         view = {}
-        ctrlr.get ->
-          view[name]=ctrlr.model()
-          @render view
       
     @next()
    
@@ -40,10 +41,11 @@ mvz = (ready) ->
     @route = @includepath = if route? then route+name else name
 
     # zappa verbs are default route enabled
-    ctrlr = this
+    ctx = this
+    ctx[verb] = base[verb] for verb in ['io', 'on', 'include', 'extend']
     for verb in ['get', 'post', 'put', 'del']
       do(verb) ->
-        ctrlr[verb] = (args...) ->
+        ctx[verb] = (args...) ->
           base.log "registering " + @route
           if args.length == 1
             r = args[0]
@@ -58,7 +60,8 @@ mvz = (ready) ->
     routes[@route] = {controller:this.constructor,filepath:filepath}
 
     # bring in the model
-    @model = base.include @includepath, ["models"]
+    mpath = path.join('models', @includepath, name)
+    #@model = base.include mpath
     return this
     
   extensions['model'] = (filepath,route) ->
@@ -67,37 +70,32 @@ mvz = (ready) ->
     if route? && name then name='/'+name
     @route = @includepath = if route? then route+name else name
 
-  @include = extensions['include'] = (name,folders) ->
-    for folder in folders || ['','controllers','models']
-      try
-        sub = require path.join(root, folder, name)
-        if sub.extend
-          @extend sub.extend, name
-        if sub.include
-          sub.include.apply(base, [base])
-        return sub
-      catch ex
-        base.log ex
+  @include = (name) ->
+    if typeof name is 'object'
+      for k,v of name
+        @[k] = @include v
+      return @[k]
+      
+    sub = require path.join(root, name)
+    if sub.include
+      if typeof sub.include is 'object'
+        return @extend sub.include, name
+      else
+        return sub.include.apply(base, [base])
 
-  @extend = extensions['extend'] = (obj,includeName) ->
+  @extend = (obj,includeName) ->
     if typeof obj is 'function' then obj = constructor:obj
     for k,v of obj 
       _super = @[k] || routes[k]?.controller || extensions[k]
       if _super
-        extension = v.call new _super(includeName,@includepath)
-        if typeof extension isnt 'object'
-          throw "extension of #{k} must return object"
-          
-        # load all of the extension methods into the new extension
-        for e,m of extensions
-          extension[e] = m
-        return extension
-
-      # register new extension
-      extensions[k] = v
-      
-      # special case?
-      if k=='log' then @[k]=v
+        ctx = new _super(includeName,@includepath)
+      else
+        # register new extension
+        extensions[k] = v
+        ctx = this
+        
+      _extension = v.call ctx
+      return _extension
       
   # go
   ready.apply this

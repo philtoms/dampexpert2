@@ -1,6 +1,6 @@
 (function() {
   var fs, mvz, path, zappa,
-    __slice = [].slice;
+    __slice = Array.prototype.slice;
 
   fs = require('fs');
 
@@ -15,30 +15,25 @@
     base = this;
     base.app.set("views", path.join(root, "views"));
     routes = {};
-    extensions = {
-      app: base
-    };
+    extensions = {};
     base.all({
       "*?*": function() {
         var m, name, route;
         name = this.params[0].split('/')[1];
         route = '/' + name;
-        if (!routes[route]) {
-          m = base.include(route);
-        }
+        if (!routes[route]) m = base.include(route);
         if (typeof m === 'function') {
           (function(name) {
-            var ctrlr, view;
-            ctrlr = base.extend({
+            var view;
+            base.extend({
               controller: function() {
-                return this;
+                this.get(function() {
+                  return view[name] = this.model();
+                });
+                return this(render(view));
               }
             }, route);
-            view = {};
-            return ctrlr.get(function() {
-              view[name] = ctrlr.model();
-              return this.render(view);
-            });
+            return view = {};
           })(name);
         }
         return this.next();
@@ -54,16 +49,19 @@
       return _results;
     };
     extensions['controller'] = function(filepath, route) {
-      var ctrlr, name, verb, _fn, _i, _len, _ref;
+      var ctx, mpath, name, verb, _fn, _i, _j, _len, _len2, _ref, _ref2;
       name = filepath != null ? path.basename(filepath, '.coffee') : '';
-      if ((route != null) && name) {
-        name = '/' + name;
-      }
+      if ((route != null) && name) name = '/' + name;
       this.route = this.includepath = route != null ? route + name : name;
-      ctrlr = this;
-      _ref = ['get', 'post', 'put', 'del'];
+      ctx = this;
+      _ref = ['io', 'on', 'include', 'extend'];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        verb = _ref[_i];
+        ctx[verb] = base[verb];
+      }
+      _ref2 = ['get', 'post', 'put', 'del'];
       _fn = function(verb) {
-        return ctrlr[verb] = function() {
+        return ctx[verb] = function() {
           var args, handler, r, subroute, _results;
           args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
           base.log("registering " + this.route);
@@ -85,49 +83,44 @@
           }
         };
       };
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        verb = _ref[_i];
+      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+        verb = _ref2[_j];
         _fn(verb);
       }
-      if (this.route.indexOf('/') !== 0) {
-        this.route = '/' + this.route;
-      }
+      if (this.route.indexOf('/') !== 0) this.route = '/' + this.route;
       routes[this.route] = {
         controller: this.constructor,
         filepath: filepath
       };
-      this.model = base.include(this.includepath, ["models"]);
+      mpath = path.join('models', this.includepath, name);
       return this;
     };
     extensions['model'] = function(filepath, route) {
       var name;
       name = filepath != null ? path.basename(filepath, '.coffee') : '';
-      if ((route != null) && name) {
-        name = '/' + name;
-      }
+      if ((route != null) && name) name = '/' + name;
       return this.route = this.includepath = route != null ? route + name : name;
     };
-    this.include = extensions['include'] = function(name, folders) {
-      var folder, sub, _i, _len, _ref;
-      _ref = folders || ['', 'controllers', 'models'];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        folder = _ref[_i];
-        try {
-          sub = require(path.join(root, folder, name));
-          if (sub.extend) {
-            this.extend(sub.extend, name);
-          }
-          if (sub.include) {
-            sub.include.apply(base, [base]);
-          }
-          return sub;
-        } catch (ex) {
-          base.log(ex);
+    this.include = function(name) {
+      var k, sub, v;
+      if (typeof name === 'object') {
+        for (k in name) {
+          v = name[k];
+          this[k] = this.include(v);
+        }
+        return this[k];
+      }
+      sub = require(path.join(root, name));
+      if (sub.include) {
+        if (typeof sub.include === 'object') {
+          return this.extend(sub.include, name);
+        } else {
+          return sub.include.apply(base, [base]);
         }
       }
     };
-    this.extend = extensions['extend'] = function(obj, includeName) {
-      var e, extension, k, m, v, _ref, _super;
+    this.extend = function(obj, includeName) {
+      var ctx, k, v, _extension, _ref, _super;
       if (typeof obj === 'function') {
         obj = {
           constructor: obj
@@ -137,20 +130,13 @@
         v = obj[k];
         _super = this[k] || ((_ref = routes[k]) != null ? _ref.controller : void 0) || extensions[k];
         if (_super) {
-          extension = v.call(new _super(includeName, this.includepath));
-          if (typeof extension !== 'object') {
-            throw "extension of " + k + " must return object";
-          }
-          for (e in extensions) {
-            m = extensions[e];
-            extension[e] = m;
-          }
-          return extension;
+          ctx = new _super(includeName, this.includepath);
+        } else {
+          extensions[k] = v;
+          ctx = this;
         }
-        extensions[k] = v;
-        if (k === 'log') {
-          this[k] = v;
-        }
+        _extension = v.call(ctx);
+        return _extension;
       }
     };
     ready.apply(this);

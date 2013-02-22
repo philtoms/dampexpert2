@@ -24,9 +24,7 @@
                   event: k,
                   id: uuid.v4()
                 };
-                if (!v.id) {
-                  v.id = uuid.v4();
-                }
+                if (!v.id) v.id = uuid.v4();
                 _results.push(console.log("storing " + k + "," + evntKey.id + " : " + v));
               } else {
                 _results.push(console.log("already stored " + k + "," + evntKey.id + " : " + v));

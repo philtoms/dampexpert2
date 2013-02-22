@@ -8,9 +8,9 @@
     "url": "git://github.com/philtoms/dampexpert2.git"
   },
   "dependencies": {
-    "coffee-script": "1.2.0",
+    "coffee-script": "~1.2.0",
     "zappajs": "> 0.4.0",
-    "nstore": "> 0.5.0",
+    "nstore": "~0.5.1",
     "node-uuid": "~1.4.0"
   },
   "devDependencies": {

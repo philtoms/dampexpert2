@@ -8,9 +8,7 @@
   module.exports = {
     publish: function(msg, data, ctx, ack) {
       var wrapper, _i, _len, _ref, _results;
-      if (typeof ack === "function") {
-        ack();
-      }
+      if (typeof ack === "function") ack();
       _ref = exchange[msg];
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
