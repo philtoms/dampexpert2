@@ -9,11 +9,14 @@
   zappa = require('zappajs');
 
   mvz = function(ready) {
-    var base, extensions, root, routes;
+    var base, basename, extensions, root, routes;
     this.version = '0.1.1';
     root = path.dirname(module.parent.filename);
     base = this;
     base.app.set("views", path.join(root, "views"));
+    basename = function(name) {
+      return path.basename(path.basename(name || __dirname, '.coffee'), '.js');
+    };
     routes = {};
     extensions = {};
     base.all({
@@ -50,11 +53,12 @@
     };
     extensions['controller'] = function(filepath, route) {
       var ctx, mpath, name, verb, _fn, _i, _j, _len, _len2, _ref, _ref2;
-      name = filepath != null ? path.basename(filepath, '.coffee') : '';
+      name = filepath != null ? basename(filepath) : '';
       if ((route != null) && name) name = '/' + name;
       this.route = this.includepath = route != null ? route + name : name;
       ctx = this;
-      _ref = ['io', 'on', 'include', 'extend'];
+      ctx.app = base;
+      _ref = ['include', 'extend'];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         verb = _ref[_i];
         ctx[verb] = base[verb];
@@ -96,8 +100,15 @@
       return this;
     };
     extensions['model'] = function(filepath, route) {
-      var name;
-      name = filepath != null ? path.basename(filepath, '.coffee') : '';
+      var ctx, name, verb, _i, _len, _ref;
+      name = filepath != null ? basename(filepath) : '';
+      ctx = this;
+      ctx.app = base;
+      _ref = ['io', 'on', 'include', 'extend'];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        verb = _ref[_i];
+        ctx[verb] = base[verb];
+      }
       if ((route != null) && name) name = '/' + name;
       return this.route = this.includepath = route != null ? route + name : name;
     };
@@ -119,24 +130,21 @@
         }
       }
     };
-    this.extend = function(obj, includeName) {
-      var ctx, k, v, _extension, _ref, _super;
-      if (typeof obj === 'function') {
-        obj = {
-          constructor: obj
-        };
-      }
+    this.extend = function(obj, name) {
+      var ctx, k, v, _super;
       for (k in obj) {
         v = obj[k];
-        _super = this[k] || ((_ref = routes[k]) != null ? _ref.controller : void 0) || extensions[k];
+        _super = extensions[k];
         if (_super) {
-          ctx = new _super(includeName, this.includepath);
-        } else {
-          extensions[k] = v;
-          ctx = this;
+          ctx = {
+            constructor: function() {
+              _super.call(this);
+              return v.call(this);
+            }
+          };
+          extensions[basename(name)] = ctx.constructor;
+          return new ctx.constructor;
         }
-        _extension = v.call(ctx);
-        return _extension;
       }
     };
     ready.apply(this);

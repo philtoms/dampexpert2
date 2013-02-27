@@ -1,3 +1,3 @@
 @include = ->
-  @get 'x':->
+  @zappaCtx this
   @ctx this

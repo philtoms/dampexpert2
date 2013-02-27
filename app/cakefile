@@ -12,11 +12,14 @@ task 'watch:server', ->
     flour.minifiers['js'] = null
     watch 'src/*.coffee', -> invoke 'build:coffee'
 
-task 'spec', ->
+task 'spec', (args) ->
     header()
     invoke 'build:coffee'
-    
-    jasmine = cp.spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
+
+    if args.arguments[0]=='dbg'
+      jasmine = cp.spawn "node", ["--debug-brk","../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
+    else
+      jasmine = cp.spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
 
     jasmine.stdout.on "data", (data) ->
       process.stdout.write data
@@ -29,6 +32,11 @@ task 'auto', ->
     flour.minifiers['js'] = null
     invoke 'spec'
     watch ['src','tests'], -> invoke 'spec'
+
+task 'dbg', ->
+    flour.minifiers['js'] = null
+    invoke 'spec'
+    watch ['src','tests'], -> invoke 'spec',
 
 header = ->
   divider = "------------"

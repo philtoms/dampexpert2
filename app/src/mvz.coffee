@@ -9,6 +9,8 @@ mvz = (ready) ->
   root = path.dirname(module.parent.filename)
   base = this
   base.app.set("views",path.join(root,"views"))
+  basename = (name) -> path.basename(path.basename(name || __dirname,'.coffee'),'.js')
+
   
   routes = {}
   extensions = {} # app:base
@@ -35,14 +37,16 @@ mvz = (ready) ->
       @include r
 
   extensions['controller'] = (filepath,route) ->
-    name = if filepath? then path.basename(filepath,'.coffee') else ''
+    name = if filepath? then basename(filepath) else ''
     
     if route? && name then name='/'+name
     @route = @includepath = if route? then route+name else name
 
-    # zappa verbs are default route enabled
     ctx = this
-    ctx[verb] = base[verb] for verb in ['io', 'on', 'include', 'extend']
+    ctx.app = base
+    ctx[verb] = base[verb] for verb in ['include', 'extend']
+
+    # zappa verbs are default route enabled
     for verb in ['get', 'post', 'put', 'del']
       do(verb) ->
         ctx[verb] = (args...) ->
@@ -65,8 +69,10 @@ mvz = (ready) ->
     return this
     
   extensions['model'] = (filepath,route) ->
-    name = if filepath? then path.basename(filepath,'.coffee') else ''
-    
+    name = if filepath? then basename(filepath) else ''
+    ctx = this
+    ctx.app = base
+    ctx[verb] = base[verb] for verb in ['io', 'on', 'include', 'extend']
     if route? && name then name='/'+name
     @route = @includepath = if route? then route+name else name
 
@@ -83,19 +89,16 @@ mvz = (ready) ->
       else
         return sub.include.apply(this, [this])
 
-  @extend = (obj,includeName) ->
-    if typeof obj is 'function' then obj = constructor:obj
+  @extend = (obj,name) ->
     for k,v of obj 
-      _super = @[k] || routes[k]?.controller || extensions[k]
+      _super = extensions[k]
       if _super
-        ctx = new _super(includeName,@includepath)
-      else
-        # register new extension
-        extensions[k] = v
-        ctx = this
-        
-      _extension = v.call ctx
-      return _extension
+        ctx = constructor: ->
+          _super.call this
+          v.call this
+          
+        extensions[basename(name)]=ctx.constructor 
+        return new ctx.constructor
       
   # go
   ready.apply this
