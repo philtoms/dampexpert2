@@ -4,9 +4,11 @@ exchange = {}
 module.exports = 
   publish: (msg,data,ack) -> 
     ack?() # message received
-    for subscriber in exchange[msg] 
-      console.log "publishing #{msg} to handler #{subscriber.id}" 
-      subscriber.handle,data
+    pump = ->
+      for subscriber in exchange[msg] 
+        console.log "publishing #{msg} to handler #{subscriber.id}" 
+        subscriber.handle,data
+        process.nextTick(pump)
     
   subscribe: (msg,handler) -> 
     subscriber = {id:uuid.v4(),handle:handler}
