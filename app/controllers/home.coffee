@@ -1,9 +1,6 @@
-@extend = controller: ->
+@@include = default:->
 
-  @include 'header'
-  @include 'main' # placeholder
-  @include 'footer' 
-
-  @index ->
-    
-    @render()
+  # overwrite main with frontpage
+  @extend main:controller:->
+  
+  

@@ -15,7 +15,7 @@
     base = this;
     base.app.set("views", path.join(root, "views"));
     basename = function(name) {
-      return path.basename(path.basename(name || __dirname, '.coffee'), '.js');
+      return path.basename(path.basename(name || __filename, '.coffee'), '.js');
     };
     routes = {};
     extensions = {};
@@ -113,13 +113,14 @@
       return this.route = this.includepath = route != null ? route + name : name;
     };
     this.include = function(name) {
-      var k, sub, v;
+      var ctx, k, sub, v, _ref, _ref2;
       if (typeof name === 'object') {
         for (k in name) {
           v = name[k];
-          this[k] = this.include(v);
+          ctx = this.include(v);
+          if ((_ref = this.extensions) != null) _ref[k] = ctx;
         }
-        return this[k];
+        return (_ref2 = this.extensions) != null ? _ref2[k] : void 0;
       }
       sub = require(path.join(root, name));
       if (sub.include) {
@@ -132,17 +133,20 @@
     };
     this.extend = function(obj, name) {
       var ctx, k, v, _super;
+      this.extensions = this.extensions || {};
       for (k in obj) {
         v = obj[k];
-        _super = extensions[k];
+        if (typeof v === 'object') return this.extend(v, k);
+        _super = this.extensions[k] || extensions[k];
         if (_super) {
           ctx = {
             constructor: function() {
               _super.call(this);
-              return v.call(this);
+              v.call(this);
+              return this;
             }
           };
-          extensions[basename(name)] = ctx.constructor;
+          this.extensions[basename(name)] = ctx.constructor;
           return new ctx.constructor;
         }
       }

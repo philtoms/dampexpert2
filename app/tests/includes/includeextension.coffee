@@ -1,4 +1,4 @@
 @include = 'controller':->
-  @app.zappaCtx this
+  @app.ctx this
   @includeCtx = createSpy('include Ctx')
   

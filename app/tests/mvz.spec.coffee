@@ -5,15 +5,15 @@ logSpy = createSpy "log"
 listenSpy = createSpy "listen"
 notReadySpy = createSpy "not ready"
 getSpy = createSpy 'get'
-zappaCtxSpy = createSpy 'zappa ctx'
+ctxSpy = createSpy 'zappa ctx'
 
-mvz = injectr "./lib/mvz.js",  
+mvz = injectr "./src/mvz.coffee",  
   {'zappajs':
     app: (fn) ->
       fn.call {
         all:->
         get:getSpy
-        zappaCtx:zappaCtxSpy
+        ctx:ctxSpy
         server:
           listen:listenSpy
           address:->
@@ -26,18 +26,22 @@ mvz = injectr "./lib/mvz.js",
     #console:log: ->
     console: console
     module:parent:filename:path.join(__dirname,"/mvz.spec.coffee")
+    __filename:__filename
+    __dirname:__dirname
   }
+
+result = null  
 sut = null
 mvz 3001, (ready) ->
   sut = this
-  sut.ctx = createSpy("ctx")
   if not listenSpy.callCount then notReadySpy()
   ready()
 
 beforeEach ->
+  result=null
   getSpy.reset()
-  zappaCtxSpy.reset()
-  spyOn(sut,"include").andCallThrough()
+  ctxSpy.reset()
+  # spyOn(sut,"include").andCallThrough()
   
 describe "intitialized application", ->
 
@@ -60,59 +64,47 @@ describe "included zappa modules", ->
   beforeEach ->
     sut.include './includes/includezappa'
     
-  it "should be in mvz context with immediate access to mvz members", ->
+  it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.ctx).toHaveBeenCalledWith(sut)
-  
-  it "should have immediate access to zappa members", ->
-    expect(sut.zappaCtx).toHaveBeenCalledWith(sut)
  
-describe "nested included zappa modules", ->
+describe "nested zappa modules included in previously included modules", ->
 
   beforeEach ->
     sut.include './includes/includenested'
     
-  it "should be in mvz context with immediate access to mvz members", ->
+  it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.ctx).toHaveBeenCalledWith(sut)
   
-describe "included override modules", ->
-  result = null
+xdescribe "named included modules that ovverride previosuly named extensions", ->
+
   beforeEach ->
-    sut.extend 'x':-> 123
-    result = sut.include 'x':'./includes/includeoverride'
+    result = sut.extend x:controller:-> @ctx = -> 123
+    sut.include x:'./includes/includeoverride'
     
   it "should override existing members", ->
-    expect(sut.x).toEqual(456)
+    expect(result.ctx()).toEqual(456)
   
 describe "included extension modules", ->
-  result=null
   beforeEach ->
-    sut.include './includes/includeextension'
-    result = sut.zappaCtx.mostRecentCall.args[0]
+    result = sut.include './includes/includeextension'
     
   it "should be in extension context", ->
-    expect(result.includeCtx).toBeDefined()
+    expect(sut.ctx).toHaveBeenCalledWith(result)
 
   it "should not extend super context", ->
     expect(sut.includeCtx).not.toBeDefined()
-
-  it "should have indirect access to zappa members", ->
-    expect(result.app).toBeDefined()
   
 describe "extended extension modules", ->
   _super=null
-  result=null
   beforeEach ->
-    sut.include './includes/includeextension'
-    _super = sut.zappaCtx.mostRecentCall.args[0]
-    debugger
-    sut.include './includes/extendextension'
-    result = sut.zappaCtx.mostRecentCall.args[0]
+    _super = sut.include './includes/includeextension'
+    result = sut.include './includes/extendextension'
     
   it "should inherit from super", ->
     expect(result.includeCtx).toBeDefined()
 
   it "should be in extension context", ->
-    expect(result.extendCtx).toBeDefined()
+    expect(sut.ctx).toHaveBeenCalledWith(result)
 
   it "should not extend super context", ->
     expect(_super.extendCtx).not.toBeDefined()

@@ -14,7 +14,7 @@ task 'watch:server', ->
 
 task 'spec', (args) ->
     header()
-    invoke 'build:coffee'
+    #invoke 'build:coffee'
 
     if args.arguments[0]=='dbg'
       jasmine = cp.spawn "node", ["--debug-brk","../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]

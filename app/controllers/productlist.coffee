@@ -1,29 +1,28 @@
-@extend = controller: ->
+@include = controller: ->
   # repo filter to take up to first 'count' showcased products
   # returns promise in fetch scope
-  showcase = fetch, count ->
-    fetch
-      @id 'product',
-      @where v -> v.isShowcased,
+  showcase = (fetch, count, cb) ->
+    fetch ->
+      @id 'product'
+      @where (v) -> v.isShowcased
       @take count
+      cb
 
   @get ->
     # will render on promise
-    @render(showcase @repo.fetch,10)
+    showcase @repo.fetch,10 @render
   
   @post (ids) ->
     # create uow in session scope
     @repo.session ->
 
-      showcase(@fetch,10, data ->
-        data.each p ->
-          p.isShowcased=false
+      showcase @fetch, 10, (p) ->
+        p.isShowcased=false
     
-        @fetch ids, data ->
-          data.each p ->
-            p.isShowcased=true
+        @fetch ids, (p) ->
+          p.isShowcased=true
     
   @put (updated) ->
     # use immediate uow
-    @repo.fetch updated.id, v -> 
-        v.isShowcased=updated.isShowcased
+    @repo.fetch @updated.id, p -> 
+        p.isShowcased=updated.isShowcased

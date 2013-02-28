@@ -4,12 +4,12 @@ zappa = require('zappajs')
 
 mvz = (ready) ->
 
-  @version = '0.1.1'
+  @version = '0.1.2'
   
   root = path.dirname(module.parent.filename)
   base = this
   base.app.set("views",path.join(root,"views"))
-  basename = (name) -> path.basename(path.basename(name || __dirname,'.coffee'),'.js')
+  basename = (name) -> path.basename(path.basename(name || __filename,'.coffee'),'.js')
 
   
   routes = {}
@@ -79,8 +79,8 @@ mvz = (ready) ->
   @include = (name) ->
     if typeof name is 'object'
       for k,v of name
-        @[k] = @include v
-      return @[k]
+        ctx = @include v
+        return @extensions?[k]=ctx
       
     sub = require path.join(root, name)
     if sub.include
@@ -90,14 +90,19 @@ mvz = (ready) ->
         return sub.include.apply(this, [this])
 
   @extend = (obj,name) ->
+    @extensions=@extensions||{}
     for k,v of obj 
-      _super = extensions[k]
+      if (typeof v is 'object')
+        return @extend v,k
+      
+      _super = @extensions[k] || extensions[k]
       if _super
         ctx = constructor: ->
           _super.call this
           v.call this
-          
-        extensions[basename(name)]=ctx.constructor 
+          return this
+
+        @extensions[basename(name)]=ctx.constructor 
         return new ctx.constructor
       
   # go

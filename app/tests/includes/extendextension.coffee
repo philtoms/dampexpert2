@@ -1,3 +1,3 @@
 @include = 'includeextension':->
-  @app.zappaCtx this
+  @app.ctx this
   @extendCtx = createSpy('extend ctx')
