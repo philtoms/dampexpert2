@@ -7,26 +7,26 @@
   @on = (obj) ->
     router = (obj) ->
       console.log "routing #{obj.message}"
+         
+      ctx = (data) => 
+        @data = data
+        obj.handler.apply this
         
-      bus.subscribe obj.message, obj.handler
+      bus.subscribe obj.message, ctx
 
       return ->
 
         ack = =>
           @ack? {message:obj.message,time:new Date}
-          
-        ctx = (handler,data) => 
-          @data = data
-          handler.apply this
         
         @publish = (obj,ack) =>
           for k, v of obj
             console.log "publishing message #{k}"
-            bus.publish k, v, ctx, ack
+            bus.publish k, v, ack # event
             
           @emit obj # only if client is 'still' connected
           
-        bus.publish obj.message, @data, ctx, ack
+        bus.publish obj.message, @data, ack # command
                           
     ws_handler = {}
     for k, v of obj

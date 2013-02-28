@@ -2,13 +2,13 @@ uuid = require('node-uuid')
 exchange = {}
 
 module.exports = 
-  publish: (msg,data,ctx,ack) -> 
-    ack?()
-    for wrapper in exchange[msg] 
-      console.log "publishing #{msg} to handler #{wrapper.id}" 
-      ctx wrapper.handler,data
+  publish: (msg,data,ack) -> 
+    ack?() # message received
+    for subscriber in exchange[msg] 
+      console.log "publishing #{msg} to handler #{subscriber.id}" 
+      subscriber.handle,data
     
   subscribe: (msg,handler) -> 
-    wrapper = {id:uuid.v4(),handler:handler}
-    if not exchange[msg] then exchange[msg] = [wrapper] else exchange[msg].push wrapper
-    console.log "handler #{wrapper.id} subscribing to #{msg}" 
+    subscriber = {id:uuid.v4(),handle:handler}
+    if not exchange[msg] then exchange[msg] = [subscriber] else exchange[msg].push subscriber
+    console.log "handler #{subscriber.id} subscribing to #{msg}" 

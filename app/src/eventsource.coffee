@@ -2,7 +2,7 @@ uuid = require('node-uuid')
 
 @include = ->
 
-  #repo = @repo || require('nstore')
+  #repo = @repo || require('nstore.events')
 
   _on = @on
   @on = (obj) ->
