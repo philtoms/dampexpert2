@@ -1,6 +1,6 @@
 @include = ->
 
-  bus = @bus || require('./direct-bus')
+  bus = @bus || require('./memory-bus')
   #idempotent = (opts.idempotent? opts.idempotent) || true
   
   _on = @on
