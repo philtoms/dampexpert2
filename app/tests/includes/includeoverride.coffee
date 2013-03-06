@@ -1,2 +1,3 @@
-@include = -> 
-  @ctx = -> 456
+@include = x:-> 
+  @val = 456
+  @ctx()

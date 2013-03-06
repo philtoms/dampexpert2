@@ -11,9 +11,8 @@ mvz = (ready) ->
   base.app.set("views",path.join(root,"views"))
   basename = (name) -> path.basename(path.basename(name || __filename,'.coffee'),'.js')
 
-  
   routes = {}
-  extensions = {} # app:base
+  extensions = {} 
   
   base.all "*?*":->
     # auto register the route
@@ -26,26 +25,14 @@ mvz = (ready) ->
         base.extend {controller:->
           @get ->
             view[name]=@model()
-          @ render view
+            @render view
         }, route
         view = {}
       
     @next()
    
-  @registerRoutes = (r) ->
-    for route in r
-      @include r
-
-  extensions['controller'] = (filepath,route) ->
-    name = if filepath? then basename(filepath) else ''
-    
-    if route? && name then name='/'+name
-    @route = @includepath = if route? then route+name else name
-
+  extensions['controller'] = ->
     ctx = this
-    ctx.app = base
-    ctx[verb] = base[verb] for verb in ['include', 'extend']
-
     # zappa verbs are default route enabled
     for verb in ['get', 'post', 'put', 'del']
       do(verb) ->
@@ -60,35 +47,48 @@ mvz = (ready) ->
             base[verb] @route+args[0], args[1]
 
     # all controllers are registered as route handlers
-    if @route.indexOf('/')!=0 then @route='/'+@route
-    routes[@route] = {controller:this.constructor,filepath:filepath}
+    routes[@route] = true
 
     # bring in the model
-    mpath = path.join('models', @includepath, name)
+    mpath = path.join('models', @route)
     #@model = base.include mpath
-    return this
     
-  extensions['model'] = (filepath,route) ->
-    name = if filepath? then basename(filepath) else ''
+  Function::property = (prop, desc) ->
+    Object.defineProperty this.prototype, prop, desc
+   
+  extensions['model'] = (_base) ->
     ctx = this
-    ctx.app = base
-    ctx[verb] = base[verb] for verb in ['io', 'on', 'include', 'extend']
-    if route? && name then name='/'+name
-    @route = @includepath = if route? then route+name else name
+    bindings=_base?.bindings || {}
+    @bind = (p) ->
+      if typeof p isnt 'object' then p ={p:null}
+      for k,v of p
+        @[k]=bindings[k]=v
+
+    Object.defineProperty _base, 'data',
+      configurable: true
+      enumerable: true
+      get:->
+        data={}
+        for k,v of bindings
+          if typeof v is 'function' then v=v()
+          data[k]=v
+        return data
 
   @include = (name) ->
     if typeof name is 'object'
       for k,v of name
         ctx = @include v
-        return @extensions?[k]=ctx
-      
+        @extensions?[k]=ctx
+        return
+        
     sub = require path.join(root, name)
     if sub.include
       if typeof sub.include is 'object'
-        return @extend sub.include, name
+        @extend sub.include, name
       else
-        return sub.include.apply(this, [this])
-
+        sub.include.apply(this, [this])
+    return
+    
   @extend = (obj,name) ->
     @extensions=@extensions||{}
     for k,v of obj 
@@ -97,13 +97,19 @@ mvz = (ready) ->
       
       _super = @extensions[k] || extensions[k]
       if _super
-        ctx = constructor: ->
-          _super.call this
+        name = basename(name)
+        ctx = constructor: (base) ->
+          @route=''
+          @name=name
+          @app = base
+          @[verb] = base[verb] for verb in ['include', 'extend']
+          _super.apply this,[base]
+          @route = [@route,name].join('/')
           v.call this
           return this
 
-        @extensions[basename(name)]=ctx.constructor 
-        return new ctx.constructor
+        @extensions[name]=ctx.constructor 
+        new ctx.constructor this
       
   # go
   ready.apply this
