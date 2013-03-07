@@ -8,9 +8,8 @@ getSpy = createSpy 'get'
 ctxSpy = createSpy 'zappa ctx'
 
 mvz = injectr "./src/mvz.coffee",  
-  {'zappajs':
-    app: (fn) ->
-      fn.call {
+  'zappajs':app: (fn) ->
+      fn.call
         all:->
         get:getSpy
         ctx:ctxSpy
@@ -20,9 +19,10 @@ mvz = injectr "./src/mvz.coffee",
         app:
           set:->
           settings:env:'test'
-      }
-  },
-  {
+          include:->
+   './ws-cqrs': require('../src/ws-cqrs')
+   './memory-bus': require('../src/memory-bus')  
+  ,{
     #console:log: ->
     console: console
     module:parent:filename:path.join(__dirname,"/mvz.spec.coffee")

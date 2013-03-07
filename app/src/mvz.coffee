@@ -2,7 +2,7 @@ fs = require('fs')
 path = require('path')
 zappa = require('zappajs')
 
-mvz = (ready) ->
+mvz = (start) ->
 
   @version = '0.1.2'
   
@@ -10,6 +10,9 @@ mvz = (ready) ->
   base = this
   base.app.set("views",path.join(root,"views"))
   basename = (name) -> path.basename(path.basename(name || __filename,'.coffee'),'.js')
+
+  bus=null
+  cqrs=null
 
   routes = {}
   extensions = {} 
@@ -58,11 +61,25 @@ mvz = (ready) ->
    
   extensions['model'] = (_base) ->
     ctx = this
-    bindings=_base?.bindings || {}
-    @bind = (p) ->
+    for verb in ['on']
+      do(verb) ->
+        ctx[verb] = (args...) ->
+          @publish = (obj) ->
+            for k,v of obj
+             if mappings[k]?.model
+               ctx[k]=mappings[k].model v
+          base[verb].call ctx, args[0]
+          
+    bindings={}
+    mappings={}
+    @map = {model:(v)->v}
+    @bind = (p,map) ->
       if typeof p isnt 'object' then p ={p:null}
       for k,v of p
         @[k]=bindings[k]=v
+        mappings[k]=
+          data:map?.data || (v)->v
+          model:map?.model
 
     Object.defineProperty _base, 'data',
       configurable: true
@@ -71,7 +88,7 @@ mvz = (ready) ->
         data={}
         for k,v of bindings
           if typeof v is 'function' then v=v()
-          data[k]=v
+          data[k] = mappings[k].data(v)
         return data
 
   @include = (name) ->
@@ -112,17 +129,19 @@ mvz = (ready) ->
         new ctx.constructor this
       
   # go
-  ready.apply this
+  start.apply this
 
-  return this
-
+  return ->
+    bus = require(bus || './memory-bus')
+    require(cqrs || './ws-cqrs').call this, bus
+    
 module.exports = (port,app) -> 
   # wire-up mvz and the app into zappa context and start app when ready
   zappa.app -> 
     zapp = this
-    mvz.call zapp, ready = ->
-      app.call zapp, ready = ->
+    (mvz.call zapp, start = ->
+      app.call zapp, start = ->
         zapp.server.listen port || 3000
         zapp.log = zapp.log || ->
         zapp.log 'Express server listening on port %d in %s mode',
-          zapp.server.address()?.port, zapp.app.settings.env
+          zapp.server.address()?.port, zapp.app.settings.env).call zapp

@@ -5,10 +5,11 @@ queue = []
 pump = -> 
   if queue.length
     msg = queue.shift()
-    for subscriber in exchange[msg.name] 
-      console.log "publishing #{msg.name} to handler #{subscriber.id}" 
-      subscriber.handle,msg.data
-      process.nextTick(pump)
+    if exchange[msg.name]?
+      for subscriber in exchange[msg.name] 
+        console.log "publishing #{msg.name} to handler #{subscriber.id}" 
+        subscriber.handle msg.data
+    process.nextTick(pump)
 
 module.exports = 
   publish: (msg,data,ack) -> 

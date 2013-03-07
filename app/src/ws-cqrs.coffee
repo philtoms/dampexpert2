@@ -1,30 +1,27 @@
-@include = ->
-
-  bus = @bus || require('./memory-bus')
-  #idempotent = (opts.idempotent? opts.idempotent) || true
-  
+cqrs = (bus) ->
   _on = @on
   @on = (obj) ->
+    ctx = this
     router = (obj) ->
       console.log "routing #{obj.message}"
-         
-      ctx = (data) => 
+      
+      bus.subscribe obj.message, (data) => 
         @data = data
-        obj.handler.apply this
+        obj.handler.apply ctx
         
-      bus.subscribe obj.message, ctx
-
       return ->
 
-        ack = =>
-          @ack? {message:obj.message,time:new Date}
-        
-        @publish = (obj,ack) =>
+        ack = @ack? =>
+          @ack {message:obj.message,time:new Date}
+
+        _publish = ctx.publish
+        ctx.publish = (obj,ack) =>
           for k, v of obj
             console.log "publishing message #{k}"
+            _publish v
             bus.publish k, v, ack # event
             
-          @emit obj # only if client is 'still' connected
+          @emit? obj # only if client is 'still' connected
           
         bus.publish obj.message, @data, ack # command
                           
@@ -33,4 +30,4 @@
       ws_handler[k] = router {message:k,handler:v}
       _on ws_handler
       
-    return
+ module.exports = cqrs
