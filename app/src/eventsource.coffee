@@ -1,11 +1,12 @@
 uuid = require('node-uuid')
 
-@include = ->
+module.exports = ->
 
   #repo = @repo || require('nstore.events')
 
   _on = @on
   @on = (obj) ->
+    ctx = this
     router = (obj) ->
       console.log "es wrapping #{obj.message}"
       return ->
@@ -21,9 +22,9 @@ uuid = require('node-uuid')
             else
               console.log "already stored #{k},#{evntKey.id} : #{v}"
                 
-        obj.handler.apply this
+        obj.handler.apply ctx
                     
     es_handler = {}
     for k, v of obj
       es_handler[k] = router {message:k,handler:v}
-      _on es_handler
+      _on.call ctx, es_handler

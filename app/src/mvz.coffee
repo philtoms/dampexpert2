@@ -11,9 +11,10 @@ mvz = (start) ->
   base.app.set("views",path.join(root,"views"))
   basename = (name) -> path.basename(path.basename(name || __filename,'.coffee'),'.js')
 
-  bus=null
-  cqrs=null
-
+  bus = './memory-bus'
+  cqrs = './ws-cqrs'
+  eventsource = './eventsource'
+  #automap = true
   routes = {}
   extensions = {} 
   
@@ -55,19 +56,22 @@ mvz = (start) ->
     # bring in the model
     mpath = path.join('models', @route)
     #@model = base.include mpath
-    
-  Function::property = (prop, desc) ->
-    Object.defineProperty this.prototype, prop, desc
-   
+
+  _publish=null
   extensions['model'] = (_base) ->
     ctx = this
     for verb in ['on']
       do(verb) ->
         ctx[verb] = (args...) ->
-          @publish = (obj) ->
-            for k,v of obj
-             if mappings[k]?.model
-               ctx[k]=mappings[k].model v
+          if not _publish
+            _publish = bus.publishEvent
+            bus.publishEvent=(msg,data,ack) ->
+              for k,v of data
+                if mappings[k]?.model
+                  ctx[k]=mappings[k].model v
+                else if automap?
+                  ctx[k]=v
+              _publish msg,data,ack
           base[verb].call ctx, args[0]
           
     bindings={}
@@ -132,8 +136,9 @@ mvz = (start) ->
   start.apply this
 
   return ->
-    bus = require(bus || './memory-bus')
-    require(cqrs || './ws-cqrs').call this, bus
+    bus = require(bus)
+    require(cqrs).call this, bus
+    require(eventsource).call this if eventsource
     
 module.exports = (port,app) -> 
   # wire-up mvz and the app into zappa context and start app when ready

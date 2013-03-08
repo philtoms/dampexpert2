@@ -22,6 +22,7 @@ mvz = injectr "./src/mvz.coffee",
           include:->
    './ws-cqrs': require('../src/ws-cqrs')
    './memory-bus': require('../src/memory-bus')  
+   './eventsource': require('../src/eventsource')  
   ,{
     #console:log: ->
     console: console

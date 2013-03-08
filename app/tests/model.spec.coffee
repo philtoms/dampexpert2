@@ -3,7 +3,7 @@ injectr = require "injectr"
 
 ctxSpy = createSpy 'zappa ctx'
 ctxOn = null
-debugger
+
 mvz = injectr.call this, "./src/mvz.coffee",  
   'zappajs': app: (fn) ->
       fn.call
@@ -23,6 +23,7 @@ mvz = injectr.call this, "./src/mvz.coffee",
             sub.include.apply(this, [this])    
    './ws-cqrs': require('../src/ws-cqrs')  
    './memory-bus': require('../src/memory-bus')  
+   './eventsource': require('../src/eventsource')  
   ,{
     #console:log: ->
     console: console
@@ -85,8 +86,6 @@ describe "auto mapping", ->
       m3 = this
     ctxOn.cmd3()
     
-  it "should map flagged properties", ->
+  it "should only map flagged properties", ->
     expect(m3.f2).toEqual('def')
-
-  it "should not map unflagged properties", ->
     expect(m3.f1).toEqual(123)

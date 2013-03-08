@@ -1,4 +1,4 @@
-cqrs = (bus) ->
+module.exports = (bus) ->
   _on = @on
   @on = (obj) ->
     ctx = this
@@ -14,20 +14,16 @@ cqrs = (bus) ->
         ack = @ack? =>
           @ack {message:obj.message,time:new Date}
 
-        _publish = ctx.publish
-        ctx.publish = (obj,ack) =>
+        ctx.publish = (obj, ack) =>
           for k, v of obj
             console.log "publishing message #{k}"
-            _publish v
-            bus.publish k, v, ack # event
+            bus.publishEvent k, v, ack
             
-          @emit? obj # only if client is 'still' connected
+          @emit? obj # only if client is still connected
           
-        bus.publish obj.message, @data, ack # command
+        bus.publishCommand obj.message, @data, ack
                           
     ws_handler = {}
     for k, v of obj
       ws_handler[k] = router {message:k,handler:v}
       _on ws_handler
-      
- module.exports = cqrs

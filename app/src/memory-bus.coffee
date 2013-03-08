@@ -12,7 +12,12 @@ pump = ->
     process.nextTick(pump)
 
 module.exports = 
-  publish: (msg,data,ack) -> 
+  publishCommand: (msg,data,ack) -> 
+    queue.push {name:msg,data:data}
+    ack?() # message received
+    pump()
+    
+  publishEvent: (msg,data,ack) -> 
     queue.push {name:msg,data:data}
     ack?() # message received
     pump()
