@@ -10,6 +10,7 @@ ctxSpy = createSpy 'zappa ctx'
 mvz = injectr "./src/mvz.coffee",  
   'zappajs':app: (fn) ->
       fn.call
+        enabled:->
         all:->
         get:getSpy
         ctx:ctxSpy
@@ -20,9 +21,6 @@ mvz = injectr "./src/mvz.coffee",
           set:->
           settings:env:'test'
           include:->
-   './ws-cqrs': require('../src/ws-cqrs')
-   './memory-bus': require('../src/memory-bus')  
-   './eventsource': require('../src/eventsource')  
   ,{
     #console:log: ->
     console: console

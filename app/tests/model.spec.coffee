@@ -3,10 +3,12 @@ injectr = require "injectr"
 
 ctxSpy = createSpy 'zappa ctx'
 ctxOn = null
+setValues = {}
 
 mvz = injectr.call this, "./src/mvz.coffee",  
   'zappajs': app: (fn) ->
       fn.call
+        enabled:-> true
         all:->
         get:->
         on:(obj)->ctxOn=obj
@@ -15,7 +17,8 @@ mvz = injectr.call this, "./src/mvz.coffee",
           listen:->
           address:->
         app:
-          set:->
+          set:(o)-> setValues[k]=v for k,v of o
+          get:(k)-> setValues[k]
           settings:env:'test'
           bus:require path.join(__dirname, '../src/memory-bus')
           include:(p)->

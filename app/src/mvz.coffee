@@ -5,16 +5,18 @@ zappa = require('zappajs')
 mvz = (start) ->
 
   @version = '0.1.2'
+
+  base = this
   
   root = path.dirname(module.parent.filename)
-  base = this
-  base.app.set("views",path.join(root,"views"))
+  #base.app.set("views",path.join(root,"views"))
   basename = (name) -> path.basename(path.basename(name || __filename,'.coffee'),'.js')
 
-  bus = './memory-bus'
-  cqrs = './ws-cqrs'
-  eventsource = './eventsource'
-  #automap = true
+  @app.set bus:'./memory-bus'
+  @app.set cqrs:'./ws-cqrs'
+  @app.set eventsource:'./eventsource'
+
+  bus=null
   routes = {}
   extensions = {} 
   
@@ -136,9 +138,10 @@ mvz = (start) ->
   start.apply this
 
   return ->
-    bus = require(bus)
-    require(cqrs).call this, bus
-    require(eventsource).call this if eventsource
+    if @enabled 'cqrs'
+      bus = require(@app.get 'bus')
+      require(@app.get 'cqrs').call this, bus
+      require(@app.get 'eventsource').call this if @enabled 'eventsource'
     
 module.exports = (port,app) -> 
   # wire-up mvz and the app into zappa context and start app when ready
