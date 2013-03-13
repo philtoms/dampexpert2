@@ -5,8 +5,8 @@ module.exports = (bus) ->
     router = (obj) ->
       console.log "routing #{obj.message}"
       
-      bus.subscribe obj.message, (data) => 
-        @data = data
+      bus.subscribe obj.message, (data) -> 
+        ctx.data = data
         obj.handler.apply ctx
         
       return ->

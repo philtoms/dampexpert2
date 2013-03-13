@@ -59,30 +59,34 @@ mvz = (startApp) ->
     mpath = path.join('models', @route)
     #@model = base.include mpath
 
-  _publish=null
   extensions['model'] = (_base) ->
 
     handlers={}
     mappings={}
     viewdata = {}
-    model={}
-    
+    init={}
+    models = {}
     @['on'] = (obj) ->
-      # hook publish event to automap event data and update viewdata
-      if not _publish
-        loadCQRS()
-        _publish = bus.publishEvent
-      bus.publishEvent=(msg,data,ack) ->
-        _publish msg,data,ack
-        if base.enabled('automap events') and not handlers[msg]
-          mapViewData(data,model)
-        mapViewData(model,viewdata)
+      loadCQRS()
         
       # switch to model context in handlers and reload state
-      for k,v of obj
-        handlers[k]=v
+      for k,h of obj
+        handlers[k]=h
         obj[k]=->
-          model.publish=@publish
+          _publish=@publish
+          model=models[@data?.id]
+          if (not model)
+            model={}
+            mapViewData(init,model)
+            model.id=@data?.id
+            models[model.id]=model
+          model.publish=(obj,ack) ->
+            for msg,data of obj
+              data.id=model.id
+              _publish.call model, obj,ack
+              if base.enabled('automap events') and not handlers[msg]
+                mapViewData(data,model)
+            mapViewData(model,viewdata)
           mapViewData(viewdata,model)
           handlers[k].call model
           
@@ -92,20 +96,20 @@ mvz = (startApp) ->
     @map = (p) ->
       if typeof p isnt 'object' 
         mappings[p]=true
-        model[p]=null
+        init[p]=null
       else for k,v of p
         if typeof v is 'function' 
           mappings[k]=v
           v=v(null,false)
         else
           mappings[k]=true
-        model[k]=v
+        init[k]=v
 
     mapViewData = (src,dest)->
       if src.load is 'function'
         src = src.load(id)
       for k,m of mappings
-        if src[k]
+        if src[k] isnt undefined
           if typeof m isnt 'function'
             dest[k] = src[k] 
           else
@@ -118,7 +122,7 @@ mvz = (startApp) ->
       configurable: true
       enumerable: true
       get:->
-        if not viewdata.length then mapViewData(model,viewdata)
+        if not Object.keys(viewdata).length then viewdata = init
         return viewdata
         
   extensions['viewmodel'] = (_base) ->
@@ -165,7 +169,7 @@ mvz = (startApp) ->
         new ctx.constructor this
       
   loadCQRS = ->
-    if not _publish and base.enabled 'cqrs'
+    if not bus and base.enabled 'cqrs'
       base.enable 'automap events'
       bus = require(base.app.get 'bus')
       require(base.app.get 'cqrs').call base, bus

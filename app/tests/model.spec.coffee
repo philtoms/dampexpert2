@@ -97,7 +97,7 @@ describe "publishing without an event handler with automap switched on", ->
     
   it "should automap mapped properties", ->
     expect(m2.f2).toEqual('def')
-    expect(sut.viewmodel.f2).toEqual('def')
+    #expect(sut.viewmodel.f2).toEqual('def')
     
 describe "publishing without an event handler with automap switched off", ->
 
@@ -123,15 +123,16 @@ describe "publishing to an explicit event handler", ->
     sut.extend m1:->
       @on cmd:->
         m2 = this
-        @publish evnt:{f1:'abc'}
-      @on evnt:->@f2='def'
+        @publish evnt:{f1:'abc', f2:'def'}
+      @on evnt:->@f2=345
+    emit.data={id:999}
     emit['cmd']()
     
   it "should not automap to model state", ->
     expect(m2.f1).toEqual(123)
     
   it "should not automap to viewmodel", ->
-    expect(sut.viewmodel.f2).toEqual('def')
+    expect(sut.viewmodel.f2).toEqual(345)
 
 describe "invoking a model through a commanmd", ->
 
@@ -141,7 +142,6 @@ describe "invoking a model through a commanmd", ->
       @on cmd:->
         m2 = this
         @publish evnt:{f1:'abc'}
-    debugger
     emit['cmd']()
     
   it "should rehydrate its modelstate", ->
