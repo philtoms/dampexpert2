@@ -78,7 +78,6 @@ xdescribe "named included modules that override previosuly named extensions", ->
     result = sut.extend x:controller:-> 
       @val = 123
       @ctx = -> @app.ctx @val
-    debugger
     sut.include x:'./includes/includeoverride'
     
   it "should override existing members", ->

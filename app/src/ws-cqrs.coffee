@@ -17,11 +17,11 @@ module.exports = (bus) ->
         ctx.publish = (obj, ack) =>
           for k, v of obj
             console.log "publishing message #{k}"
-            bus.publishEvent k, v, ack
+            bus.publishEvent.call ctx, k, v, ack
             
           @emit? obj # only if client is still connected
           
-        bus.publishCommand obj.message, @data, ack
+        bus.publishCommand.call ctx, obj.message, @data, ack
                           
     ws_handler = {}
     for k, v of obj

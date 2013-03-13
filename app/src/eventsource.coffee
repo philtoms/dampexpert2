@@ -12,7 +12,7 @@ module.exports = ->
       return ->
         _publish = @publish
         @publish = (obj, cb) ->
-          _publish.apply this,[obj,cb]
+          _publish.apply ctx,[obj,cb]
           for k, v of obj
             if not k.id?
               evntKey = {event:k,id:uuid.v4()}
