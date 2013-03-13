@@ -1,20 +1,18 @@
 path = require "path"
 injectr = require "injectr"
 
-ctxSpy = createSpy 'zappa ctx'
 emit = {}
 setValues = {}
 
 mvz = injectr.call this, "./src/mvz.coffee",  
   'zappajs': app: (fn) ->
       fn.call
-        enabled:(k) -> setValues[k]?
+        enabled:(k) -> if setValues[k] then setValues[k] else false
         enable:(k) -> setValues[k]=true
-        disable:(k) -> delete setValues[k]?
+        disable:(k) -> if setValues[k] then setValues[k]=false
         all:->
         get:->
         on:(obj)->emit[k]=v for k,v of obj
-        ctx:ctxSpy
         server:
           listen:->
           address:->
@@ -22,7 +20,6 @@ mvz = injectr.call this, "./src/mvz.coffee",
           set:(o)-> setValues[k]=v for k,v of o
           get:(k)-> setValues[k]
           settings:env:'test'
-          bus:require path.join(__dirname, '../src/memory-bus')
    './ws-cqrs': require('../src/ws-cqrs')  
    './memory-bus': require('../src/memory-bus')  
    './eventsource': require('../src/eventsource')  
@@ -47,10 +44,8 @@ mvz 3001, (ready) ->
 emit['cmd']()
 
 beforeEach ->
-  sut.disable 'automap events'
-  #ctxSpy.reset()
   
-describe "model mappings", ->
+describe "model state mappings", ->
  
   it "should be initialised with optional value", ->
     expect(m1.f1).toEqual(123)
@@ -70,9 +65,9 @@ describe "extended model", ->
   beforeEach ->
     sut.extend m1:->
       @map 'f2':'abc'
-      @on cmd2:-> 
+      @on cmd:-> 
         m2 = this
-    emit['cmd2']()
+    emit['cmd']()
     
   it "should inherit base model mappings", ->
     expect(m2.f1).toEqual(123)
@@ -80,32 +75,75 @@ describe "extended model", ->
   it "should override base model mappings", ->
     expect(m2.f2).toEqual('abc')
 
-describe "implicit event handler", ->
+describe "included extended model", ->
 
-  m3 = null
+  beforeEach ->
+    sut.include 'includes/extendmodel'
+    emit['excmd']()
+    
+  it "should be accessible in calling context", ->
+    expect(sut.viewmodel.f1).toEqual('ex1')
+    expect(sut.viewmodel.f2).toEqual(456)
+
+describe "publishing without an event handler with automap switched on", ->
+
+  m2 = null
   beforeEach ->
     sut.extend m1:->
-      @on cmd3:->
-        m3 = this
+      @on cmd:->
+        m2 = this
         @publish evnt3:{f2:'def'}
-    emit['cmd3']()
+    emit['cmd']()
     
   it "should automap mapped properties", ->
-    expect(m3.f2).toEqual('def')
+    expect(m2.f2).toEqual('def')
     expect(sut.viewmodel.f2).toEqual('def')
     
+describe "publishing without an event handler with automap switched off", ->
 
-describe "explicit event handler", ->
+  m2 = null
+  beforeEach ->
+    sut.disable 'automap events'
+    sut.extend m1:->
+      @on cmd:->
+        m2 = this
+        @publish evnt3:{f1:'abc'}
+    emit['cmd']()
+    
+  it "should not automap to model state", ->
+    expect(m2.f1).toEqual(123)
+    
+  it "should not automap to viewmodel", ->
+    expect(sut.viewmodel.f1).toEqual(123)
+    
+describe "publishing to an explicit event handler", ->
 
-  m4 = null
+  m2 = null
   beforeEach ->
     sut.extend m1:->
-      @on cmd4:->
-        m4 = this
-        @publish evnt4:{f1:'abc'}
-      @on evnt4:->@f2='def'
-    emit['cmd4']()
+      @on cmd:->
+        m2 = this
+        @publish evnt:{f1:'abc'}
+      @on evnt:->@f2='def'
+    emit['cmd']()
     
-  it "should not automap event properties", ->
-    expect(m4.f1).toEqual(123)
+  it "should not automap to model state", ->
+    expect(m2.f1).toEqual(123)
+    
+  it "should not automap to viewmodel", ->
     expect(sut.viewmodel.f2).toEqual('def')
+
+describe "invoking a model through a commanmd", ->
+
+  m2 = null
+  beforeEach ->
+    sut.extend m1:->
+      @on cmd:->
+        m2 = this
+        @publish evnt:{f1:'abc'}
+    debugger
+    emit['cmd']()
+    
+  it "should rehydrate its modelstate", ->
+    expect(m2.f1).toEqual(123)
+    

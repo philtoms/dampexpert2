@@ -77,21 +77,23 @@ mvz = (startApp) ->
         if base.enabled('automap events') and not handlers[msg]
           mapViewData(data,model)
         mapViewData(model,viewdata)
-      # register on message handlers
+        
+      # switch to model context in handlers and reload state
       for k,v of obj
         handlers[k]=v
         obj[k]=->
           model.publish=@publish
+          mapViewData(viewdata,model)
           handlers[k].call model
-        #mapViewData(viewdata,model)
-        base['on'].call this, obj
+          
+      base['on'].call this, obj
 
+    # build a mapper
     @map = (p) ->
       if typeof p isnt 'object' 
-        o={}
-        o[p]=null
-        p=o
-      for k,v of p
+        mappings[p]=true
+        model[p]=null
+      else for k,v of p
         if typeof v is 'function' 
           mappings[k]=v
           v=v(null,false)
@@ -99,19 +101,25 @@ mvz = (startApp) ->
           mappings[k]=true
         model[k]=v
 
+    mapViewData = (src,dest)->
+      if src.load is 'function'
+        src = src.load(id)
+      for k,m of mappings
+        if src[k]
+          if typeof m isnt 'function'
+            dest[k] = src[k] 
+          else
+            dest[k] = m(src[k],dest==viewdata)
+      # decouple
+      if dest==viewdata 
+        viewdata = JSON.parse(JSON.stringify(viewdata))
+        
     Object.defineProperty _base, 'viewmodel',
       configurable: true
       enumerable: true
       get:->
-        mapViewData(model,viewdata, not viewdata.length)
+        if not viewdata.length then mapViewData(model,viewdata)
         return viewdata
-        
-    mapViewData = (src,dest,read=true)->
-      if read then for k,m of mappings
-        if typeof m isnt 'function' 
-          dest[k] = src[k] 
-        else
-          dest[k] = m(src[k],dest==viewdata)
         
   extensions['viewmodel'] = (_base) ->
     ctx = this
