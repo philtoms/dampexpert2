@@ -125,7 +125,6 @@ describe "publishing to an explicit event handler", ->
         m2 = this
         @publish evnt:{f1:'abc', f2:'def'}
       @on evnt:->@f2=345
-    emit.data={id:999}
     emit['cmd']()
     
   it "should not automap to model state", ->
@@ -134,6 +133,23 @@ describe "publishing to an explicit event handler", ->
   it "should not automap to viewmodel", ->
     expect(sut.viewmodel.f2).toEqual(345)
 
+describe "a commanmd with an unknown id", ->
+
+  m2 = null
+  exMsg = null
+  beforeEach ->
+    try
+      sut.extend m1:->
+        @on cmd:->
+          m2 = this
+          @publish evnt:{f1:'abc'}
+      emit['cmd'] {id:78}
+    catch ex
+      exMsg=ex
+      
+  it "should throw a not found exception", ->
+    expect(exMsg).toEqual("Model aggregate not found for id 78")
+    
 describe "invoking a model through a commanmd", ->
 
   m2 = null

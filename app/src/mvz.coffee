@@ -1,5 +1,6 @@
 fs = require('fs')
 path = require('path')
+uuid = require('node-uuid')
 zappa = require('zappajs')
 
 mvz = (startApp) ->
@@ -59,27 +60,29 @@ mvz = (startApp) ->
     mpath = path.join('models', @route)
     #@model = base.include mpath
 
+  models = {}
   extensions['model'] = (_base) ->
 
     handlers={}
     mappings={}
     viewdata = {}
     init={}
-    models = {}
-    @['on'] = (obj) ->
-      loadCQRS()
-        
+    modelId = uuid.v4()
+    
+    @['on'] = (obj) ->      
       # switch to model context in handlers and reload state
       for k,h of obj
         handlers[k]=h
-        obj[k]=->
+        obj[k]= (cdata) ->
           _publish=@publish
-          model=models[@data?.id]
+          id = cdata?.id || modelId
+          model=models[id]
           if (not model)
-            model={}
+            if cdata?.id? 
+              throw "Model aggregate not found for id #{cdata.id}"
+            model={id}
             mapViewData(init,model)
-            model.id=@data?.id
-            models[model.id]=model
+            models[id]=model
           model.publish=(obj,ack) ->
             for msg,data of obj
               data.id=model.id
@@ -88,7 +91,7 @@ mvz = (startApp) ->
                 mapViewData(data,model)
             mapViewData(model,viewdata)
           mapViewData(viewdata,model)
-          handlers[k].call model
+          handlers[k].call model,cdata
           
       base['on'].call this, obj
 

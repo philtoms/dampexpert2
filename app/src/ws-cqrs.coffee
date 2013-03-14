@@ -6,10 +6,9 @@ module.exports = (bus) ->
       console.log "routing #{obj.message}"
       
       bus.subscribe obj.message, (data) -> 
-        ctx.data = data
-        obj.handler.apply ctx
+        obj.handler.apply ctx, [data]
         
-      return ->
+      return (data) ->
 
         ack = @ack? =>
           @ack {message:obj.message,time:new Date}
@@ -21,7 +20,7 @@ module.exports = (bus) ->
             
           @emit? obj # only if client is still connected
           
-        bus.publishCommand.call ctx, obj.message, @data, ack
+        bus.publishCommand.call ctx, obj.message, data, ack
                           
     ws_handler = {}
     for k, v of obj
