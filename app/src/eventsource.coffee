@@ -8,20 +8,20 @@ module.exports = ->
   @on = (obj) ->
     ctx = this
     router = (obj) ->
-      console.log "es wrapping #{obj.message}"
-      return (data) ->
+      ctx.log "es wrapping #{obj.message}"
+      return (data,err) ->
         _publish = @publish
         @publish = (obj, cb) ->
           _publish.apply ctx,[obj,cb]
           for k, v of obj
             if not k.id?
               evntKey = {event:k,id:uuid.v4()}
-              console.log "storing #{k},#{evntKey.id} : #{v}"
+              ctx.log "storing #{k},#{evntKey.id} : #{v}"
               #repo.store(evntKey,v, -> cb? v.id)        
             else
-              console.log "already stored #{k},#{evntKey.id} : #{v}"
+              ctx.log "already stored #{k},#{evntKey.id} : #{v}"
                 
-        obj.handler.apply ctx, [data]
+        obj.handler.call ctx, data, err
                     
     es_handler = {}
     for k, v of obj

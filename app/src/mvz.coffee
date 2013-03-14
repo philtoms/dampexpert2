@@ -16,8 +16,10 @@ mvz = (startApp) ->
   @app.set bus:'./memory-bus'
   @app.set cqrs:'./ws-cqrs'
   @app.set eventsource:'./eventsource'
+  @app.set 'model-store':'./memory-store'
 
   bus=null
+  models=null
   routes = {}
   extensions = {} 
   
@@ -60,7 +62,7 @@ mvz = (startApp) ->
     mpath = path.join('models', @route)
     #@model = base.include mpath
 
-  models = {}
+  _publish=null
   extensions['model'] = (_base) ->
 
     handlers={}
@@ -73,25 +75,28 @@ mvz = (startApp) ->
       # switch to model context in handlers and reload state
       for k,h of obj
         handlers[k]=h
-        obj[k]= (cdata) ->
-          _publish=@publish
+        obj[k]= (cdata, errh) ->
+          _publish=_publish || @publish
           id = cdata?.id || modelId
-          model=models[id]
-          if (not model)
-            if cdata?.id? 
-              throw "Model aggregate not found for id #{cdata.id}"
-            model={id}
-            mapViewData(init,model)
-            models[id]=model
-          model.publish=(obj,ack) ->
-            for msg,data of obj
-              data.id=model.id
-              _publish.call model, obj,ack
-              if base.enabled('automap events') and not handlers[msg]
-                mapViewData(data,model)
-            mapViewData(model,viewdata)
-          mapViewData(viewdata,model)
-          handlers[k].call model,cdata
+          models.load id, (err,model) ->
+            if (not model)
+              if cdata?.id?
+                errh? "Model aggregate not found for id #{cdata.id}"
+                return
+              model={id}
+              mapViewData(init,model)
+              
+            model.publish=(obj,ack) ->
+              for msg,data of obj
+                data.id=model.id # no nonsense
+                _publish.call model, obj,ack
+                if base.enabled('automap events') and not handlers[msg]
+                  mapViewData(data,model)
+              models.store model
+              mapViewData(model,viewdata)
+              
+            mapViewData(viewdata,model)
+            handlers[k].call model,cdata
           
       base['on'].call this, obj
 
@@ -159,6 +164,7 @@ mvz = (startApp) ->
       if _super
         name = basename(name)
         ctx = constructor: (base) ->
+          @log = base.log
           @route=''
           @name=name
           @app = base
@@ -175,9 +181,11 @@ mvz = (startApp) ->
     if not bus and base.enabled 'cqrs'
       base.enable 'automap events'
       bus = require(base.app.get 'bus')
+      models = require(base.app.get 'model-store')
       require(base.app.get 'cqrs').call base, bus
       require(base.app.get 'eventsource').call base if base.enabled 'eventsource'
-      
+      bus.log = models.log = base.log
+
   # go
   startApp.call this,loadCQRS
     
@@ -187,8 +195,8 @@ module.exports = (port,app) ->
     zapp = this
     mvz.call zapp, startApp = (loadCQRS) ->
       app.call zapp, startServer = ->
-        loadCQRS()
         zapp.server.listen port || 3000
         zapp.log = zapp.log || ->
+        loadCQRS()
         zapp.log 'Express server listening on port %d in %s mode',
           zapp.server.address()?.port, zapp.app.settings.env

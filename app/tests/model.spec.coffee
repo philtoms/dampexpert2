@@ -3,7 +3,9 @@ injectr = require "injectr"
 
 emit = {}
 setValues = {}
-
+errors = []
+models = {}
+bus={}
 mvz = injectr.call this, "./src/mvz.coffee",  
   'zappajs': app: (fn) ->
       fn.call
@@ -20,9 +22,18 @@ mvz = injectr.call this, "./src/mvz.coffee",
           set:(o)-> setValues[k]=v for k,v of o
           get:(k)-> setValues[k]
           settings:env:'test'
-   './ws-cqrs': require('../src/ws-cqrs')  
-   './memory-bus': require('../src/memory-bus')  
-   './eventsource': require('../src/eventsource')  
+  './ws-cqrs': require('../src/ws-cqrs')  
+  './memory-bus': bus=require('../src/memory-bus')  
+  './eventsource': require('../src/eventsource')  
+  './memory-store': 
+    load: (id,cb) -> 
+      model = models[id]
+      if not model
+        errors.push id
+      cb null,models[id]
+    store: (model,cb) -> 
+      models[model.id]=model
+      cb? null,model.id
   ,{
     #console:log: ->
     console: console
@@ -44,6 +55,8 @@ mvz 3001, (ready) ->
 emit['cmd']()
 
 beforeEach ->
+  sut.enable 'automap events'
+  bus.reset()
   
 describe "model state mappings", ->
  
@@ -136,30 +149,30 @@ describe "publishing to an explicit event handler", ->
 describe "a commanmd with an unknown id", ->
 
   m2 = null
-  exMsg = null
   beforeEach ->
-    try
-      sut.extend m1:->
-        @on cmd:->
-          m2 = this
-          @publish evnt:{f1:'abc'}
-      emit['cmd'] {id:78}
-    catch ex
-      exMsg=ex
+    sut.extend m1:->
+      @on cmd:(d)->
+        m2 = this
+        @publish evnt:{f1:d.v}
+    emit['cmd'] {v:'abc'}
+    emit['cmd'] {id:78,v:'def'}
       
-  it "should throw a not found exception", ->
-    expect(exMsg).toEqual("Model aggregate not found for id 78")
+  it "should log the error and swallow the action", ->
+    expect(errors.pop()).toEqual(78)
+    expect(m2.f1).toEqual('abc')
     
 describe "invoking a model through a commanmd", ->
 
   m2 = null
   beforeEach ->
     sut.extend m1:->
-      @on cmd:->
+      @on cmd: (v)->
         m2 = this
-        @publish evnt:{f1:'abc'}
-    emit['cmd']()
+        @publish evnt:{f1:v}
+    emit['cmd'] 'abc'
     
   it "should rehydrate its modelstate", ->
-    expect(m2.f1).toEqual(123)
+    expect(m2.f1).toEqual('abc')
     
+describe "eot", ->
+  xit "x", -> console.log id for id of models

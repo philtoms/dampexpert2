@@ -3,10 +3,10 @@ module.exports = (bus) ->
   @on = (obj) ->
     ctx = this
     router = (obj) ->
-      console.log "routing #{obj.message}"
+      ctx.log "routing #{obj.message}"
       
-      bus.subscribe obj.message, (data) -> 
-        obj.handler.apply ctx, [data]
+      bus.subscribe obj.message, (data, err) -> 
+        obj.handler.call ctx, data,err
         
       return (data) ->
 
@@ -15,12 +15,14 @@ module.exports = (bus) ->
 
         ctx.publish = (obj, ack) =>
           for k, v of obj
-            console.log "publishing message #{k}"
-            bus.publishEvent.call ctx, k, v, ack
+            ctx.log "publishing message #{k}"
+            bus.publishEvent.call ctx, k, v, ack, (err) ->
+              console.log err
             
           @emit? obj # only if client is still connected
           
-        bus.publishCommand.call ctx, obj.message, data, ack
+        bus.publishCommand.call ctx, obj.message, data, ack, (err) ->
+          console.log err
                           
     ws_handler = {}
     for k, v of obj
