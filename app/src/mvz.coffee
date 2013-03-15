@@ -142,26 +142,28 @@ mvz = (startApp) ->
         ctx[verb] = (args...) ->
           base[verb].call ctx, args[0]
           
-  @include = (name) ->
+  @include = (name, regname) ->
     if typeof name is 'object'
       for k,v of name
-        ctx = @include v
-        @extensions?[k]=ctx
-        return
+        return @include v,k
         
     sub = require path.join(root, name)
     if sub.extend
-      @extend sub.extend, name
+      @extend sub.extend, regname || name
     if sub.include
       sub.include.apply(this, [this])
     return
     
   @extend = (obj,name) ->
-    @extensions=@extensions||{}
+    @extensions=@extensions||{}      
+    if typeof obj is 'function'
+      @extensions[name]=obj 
+      return
+      
     for k,v of obj 
       if (typeof v is 'object')
         return @extend v,k
-      
+
       _super = @extensions[k] || extensions[k]
       if _super
         name = basename(name)

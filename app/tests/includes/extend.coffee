@@ -1,0 +1,2 @@
+@extend = ->
+  @ctx = @app.ctx

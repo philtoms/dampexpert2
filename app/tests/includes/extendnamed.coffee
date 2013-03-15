@@ -1,0 +1,2 @@
+@extend = named:->
+  @ctx 'named'

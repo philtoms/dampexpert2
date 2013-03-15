@@ -30,15 +30,14 @@ mvz = injectr "./src/mvz.coffee",
   }
 
 sut = null
-mvz 3001, (ready) ->
-  sut = this
-  if not listenSpy.callCount then notReadySpy()
-  ready()
 
 beforeEach ->
   getSpy.reset()
   ctxSpy.reset()
-  # spyOn(sut,"include").andCallThrough()
+  mvz 3001, (ready) ->
+    sut = this
+    if not listenSpy.callCount then notReadySpy()
+    ready()
   
 describe "intitialized application", ->
 
@@ -72,17 +71,6 @@ describe "nested zappa modules included in previously included modules", ->
   it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.ctx).toHaveBeenCalledWith(sut)
   
-xdescribe "named included modules that override previosuly named extensions", ->
-
-  beforeEach ->
-    result = sut.extend x:controller:-> 
-      @val = 123
-      @ctx = -> @app.ctx @val
-    sut.include x:'./includes/includeoverride'
-    
-  it "should override existing members", ->
-    expect(ctxSpy).toHaveBeenCalledWith(456)
-  
 describe "included modules that override previosuly named extensions", ->
 
   beforeEach ->
@@ -94,6 +82,16 @@ describe "included modules that override previosuly named extensions", ->
   it "should override existing members", ->
     expect(ctxSpy).toHaveBeenCalledWith(456)
   
+describe "named included modules", ->
+
+  beforeEach ->
+    debugger
+    sut.include named:'./includes/extend'
+    sut.include './includes/extendnamed'
+    
+  it "should be registered as extension points under name rather than filename", ->
+    expect(ctxSpy).toHaveBeenCalledWith('named')
+  
 describe "included extension modules", ->
   beforeEach ->
     sut.include './includes/includeextension'
@@ -104,21 +102,21 @@ describe "included extension modules", ->
   it "should not extend super context", ->
     expect(sut.includeCtx).not.toBeDefined()
   
-describe "child extension modules", ->
+describe "extension modules that extend extension point modules", ->
   _super=null
   _child=null
   beforeEach ->
     sut.include './includes/includeextension'
-    sut.include './includes/extendextension'
+    sut.include './includes/extendincludeextension'
     _super = ctxSpy.calls[0].args[0]
     _child = ctxSpy.calls[1].args[0]
 
-  it "should inherit from super", ->
+  it "should inherit from extension point", ->
     expect(_child.includeCtx).toBeDefined()
 
   it "should be in extension context", ->
     expect(sut.ctx).toHaveBeenCalledWith(_child)
 
-  it "should not extend super context", ->
+  it "should not extend extension point context", ->
     expect(_super.extendCtx).not.toBeDefined()
 
