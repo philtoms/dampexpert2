@@ -20,11 +20,11 @@ module.exports = (bus) ->
               console.log err
             
           @emit? obj # only if client is still connected
-          
+
         bus.publishCommand.call ctx, obj.message, data, ack, (err) ->
           console.log err
                           
     ws_handler = {}
     for k, v of obj
       ws_handler[k] = router {message:k,handler:v}
-      _on ws_handler
+      _on.call ctx, ws_handler

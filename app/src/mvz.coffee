@@ -71,34 +71,36 @@ mvz = (startApp) ->
     init={}
     modelId = uuid.v4()
     
-    @['on'] = (obj) ->      
-      # switch to model context in handlers and reload state
-      for k,h of obj
-        handlers[k]=h
-        obj[k]= (cdata, errh) ->
-          _publish=_publish || @publish
-          id = cdata?.id || modelId
-          models.load id, (err,model) ->
-            if (not model)
-              if cdata?.id?
-                errh? "Model aggregate not found for id #{cdata.id}"
-                return
-              model={id}
-              mapViewData(init,model)
-              
-            model.publish=(obj,ack) ->
-              for msg,data of obj
-                data.id=model.id # no nonsense
-                _publish.call model, obj,ack
-                if base.enabled('automap events') and not handlers[msg]
-                  mapViewData(data,model)
-              models.store model
-              mapViewData(model,viewdata)
-              
-            mapViewData(viewdata,model)
-            handlers[k].call model,cdata
-          
-      base['on'].call this, obj
+    @['on'] = (obj) ->
+      ctx=this
+      onCQRSload ->
+        for k,h of obj
+          handlers[k]=h
+          obj[k]= (cdata, errh) ->
+            _publish=_publish || ctx.publish
+            id = cdata?.id || modelId
+            models.load id, (err,model) ->
+              if (not model)
+                if cdata?.id?
+                  errh? "Model aggregate not found for id #{cdata.id}"
+                  return
+                model={id}
+                mapViewData(init,model)
+                
+              model.publish=(obj,ack) ->
+                for msg,data of obj
+                  data.id=model.id # no nonsense
+                  _publish.call model, obj,ack
+                  if base.enabled('automap events') and not handlers[msg]
+                    mapViewData(data,model)
+                models.store model
+                mapViewData(model,viewdata)
+                
+              # switch to model context in handlers
+              mapViewData(viewdata,model)
+              handlers[k].call model,cdata
+            
+        base['on'].call ctx, obj
 
     # build a mapper
     @map = (p) ->
@@ -176,16 +178,22 @@ mvz = (startApp) ->
 
         @extensions[name]=ctx.constructor 
         new ctx.constructor this
-      
+
+  onLoad = []
   loadCQRS = ->
-    if not bus and base.enabled 'cqrs'
+    if not bus and base.enabled 'cqrs' 
       base.enable 'automap events'
       bus = require(base.app.get 'bus')
       models = require(base.app.get 'model-store')
       require(base.app.get 'cqrs').call base, bus
       require(base.app.get 'eventsource').call base if base.enabled 'eventsource'
       bus.log = models.log = base.log
-
+    go() for go in onLoad
+      
+  onCQRSload = (go) ->
+      if bus or not base.enabled 'cqrs' then go()
+      onLoad.push go
+    
   # go
   startApp.call this,loadCQRS
     
@@ -193,6 +201,7 @@ module.exports = (port,app) ->
   # wire-up mvz and the app into zappa context and start app when ready
   zappa.app -> 
     zapp = this
+    zapp.log = ->
     mvz.call zapp, startApp = (loadCQRS) ->
       app.call zapp, startServer = ->
         zapp.server.listen port || 3000

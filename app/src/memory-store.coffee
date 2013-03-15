@@ -1,7 +1,8 @@
 uuid = require('node-uuid')
 models={}
+mid = uuid.v4()
 
-store = 
+mstore = 
   load: (id,cb) -> 
     process.nextTick ->
       cb null,models[id]
@@ -11,4 +12,4 @@ store =
     process.nextTick ->
       cb? null,model.id
 
-module.exports = store
+module.exports = mstore
