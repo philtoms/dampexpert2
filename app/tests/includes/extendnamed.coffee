@@ -1,2 +1,2 @@
 @extend = named:->
-  @ctx 'named'
+  @ctx @nane

@@ -82,26 +82,6 @@ describe "included modules that override previosuly named extensions", ->
   it "should override existing members", ->
     expect(ctxSpy).toHaveBeenCalledWith(456)
   
-describe "named included modules", ->
-
-  beforeEach ->
-    debugger
-    sut.include named:'./includes/extend'
-    sut.include './includes/extendnamed'
-    
-  it "should be registered as extension points under name rather than filename", ->
-    expect(ctxSpy).toHaveBeenCalledWith('named')
-  
-describe "included extension modules", ->
-  beforeEach ->
-    sut.include './includes/includeextension'
-    
-  it "should be in extension context", ->
-    expect(ctxSpy.mostRecentCall.args[0].val).toEqual(123)
-
-  it "should not extend super context", ->
-    expect(sut.includeCtx).not.toBeDefined()
-  
 describe "extension modules that extend extension point modules", ->
   _super=null
   _child=null

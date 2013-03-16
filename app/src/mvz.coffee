@@ -20,28 +20,11 @@ mvz = (startApp) ->
 
   bus=null
   models=null
-  routes = {}
   extensions = {} 
   
-  base.all "*?*":->
-    # auto register the route
-    name = @params[0].split('/')[1]
-    route = '/'+ name
-    if not routes[route] then m = base.include route
-    # model found but no controller so build one
-    if typeof m is 'function'
-      do (name) ->
-        base.extend {controller:->
-          @get ->
-            view[name]=@model()
-            @render view
-        }, route
-        view = {}
-      
-    @next()
-   
-  extensions['controller'] = ->
+  extensions['controller'] = (_super) ->
     ctx = this
+    @route = [_super.route,@name].join('/')
     # zappa verbs are default route enabled
     for verb in ['get', 'post', 'put', 'del']
       do(verb) ->
@@ -55,15 +38,12 @@ mvz = (startApp) ->
           else
             base[verb] @route+args[0], args[1]
 
-    # all controllers are registered as route handlers
-    routes[@route] = true
-
     # bring in the model
     mpath = path.join('models', @route)
     #@model = base.include mpath
 
   _publish=null
-  extensions['model'] = (_base) ->
+  extensions['model'] = (_super) ->
 
     handlers={}
     mappings={}
@@ -128,20 +108,22 @@ mvz = (startApp) ->
       if dest==viewdata 
         viewdata = JSON.parse(JSON.stringify(viewdata))
         
-    Object.defineProperty _base, 'viewmodel',
+    Object.defineProperty _super, 'viewmodel',
       configurable: true
       enumerable: true
       get:->
         if not Object.keys(viewdata).length then viewdata = init
         return viewdata
         
-  extensions['viewmodel'] = (_base) ->
+  extensions['viewmodel'] = (_super) ->
     ctx = this
     for verb in ['on']
       do(verb) ->
         ctx[verb] = (args...) ->
           base[verb].call ctx, args[0]
           
+  extensions['inject'] = (_super) ->
+  
   @include = (name, regname) ->
     if typeof name is 'object'
       for k,v of name
@@ -153,34 +135,27 @@ mvz = (startApp) ->
     if sub.include
       sub.include.apply(this, [this])
     return
-    
+
   @extend = (obj,name) ->
-    @extensions=@extensions||{}      
-    if typeof obj is 'function'
-      @extensions[name]=obj 
-      return
-      
     for k,v of obj 
       if (typeof v is 'object')
         return @extend v,k
 
-      _super = @extensions[k] || extensions[k]
-      if _super
+      extend = extensions[k]
+      if extend
         name = basename(name)
-        ctx = constructor: (base) ->
+        ctx = constructor: (_super) ->
           @log = base.log
-          @route=''
           @name=name
           @app = base
           @[verb] = base[verb] for verb in ['include', 'extend']
-          _super.apply this,[base]
-          @route = [@route,name].join('/')
+          extend.apply this,[_super]
           v.call this
-          return this
 
-        @extensions[name]=ctx.constructor 
+        extensions[name]=ctx.constructor 
         new ctx.constructor this
-
+        return
+        
   onLoad = []
   loadCQRS = ->
     if not bus and base.enabled 'cqrs' 
