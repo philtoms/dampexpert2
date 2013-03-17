@@ -46,6 +46,7 @@ sut = null
 m1=null
 mvz 3001, (ready) ->
   sut = this
+  debugger
   @extend m1:'model':->
     @map f1:123
     @map 'f2'
