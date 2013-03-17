@@ -10,6 +10,7 @@ mvz = injectr "./src/mvz.coffee",
           address:->
         app:
           set:->
+          get:->
           settings:env:'test'
           include:->
   ,{
@@ -33,6 +34,13 @@ describe "ioc container", ->
       
   it "should inject included ioc extensions", ->
     sut.include './includes/includeinject'
-    debugger
     sut.extend viewmodel:->
       expect(@x).toBeDefined()
+      
+  it "should inject extensions that override default behaviour", ->
+    sut.extend inject:->
+      @x=->''
+      @log = (m) -> @x = m
+      @log 'xyz'
+    sut.extend viewmodel:->
+      expect(@x).toEqual('xyz')

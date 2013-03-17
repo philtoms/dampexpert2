@@ -9,6 +9,15 @@ mvz = (startApp) ->
 
   base = this
   
+  # default all logs to console
+  @log = logger = (m) -> console.log m
+  loglevel=2
+  loglevels = {'info':1,'warn':2,'error':3}
+  logger.debug = (m) -> logger m
+  for k,v of loglevels
+    do (k,v) ->
+      logger[k] = (m) -> logger m if v>=loglevel
+    
   root = path.dirname(module.parent.filename)
   #base.app.set("views",path.join(root,"views"))
   basename = (name) -> path.basename(path.basename(name || __filename,'.coffee'),'.js')
@@ -31,7 +40,7 @@ mvz = (startApp) ->
     for verb in ['get', 'post', 'put', 'del']
       do(verb) ->
         ctx[verb] = (args...) ->
-          base.log "registering " + @route
+          base.log.debug "registering " + @route
           if args.length == 1
             r = args[0]
             if typeof r isnt 'object' then r = {'':args[0]}
@@ -62,9 +71,9 @@ mvz = (startApp) ->
             _publish=_publish || ctx.publish
             id = cdata?.id || modelId
             models.load id, (err,model) ->
-              if (not model)
+              if (err or not model)
                 if cdata?.id?
-                  errh? "Model aggregate not found for id #{cdata.id}"
+                  base.log.error "Model aggregate not found for id #{cdata.id}"
                   return
                 model={id}
                 mapViewData(init,model)
@@ -174,8 +183,10 @@ mvz = (startApp) ->
         
     extend.call this, obj
     return
-        
+
   loadCQRS = ->
+    debugger
+    loglevel = loglevels[base.app.get 'loglevel'] || loglevel
     if not bus and base.enabled 'cqrs' 
       base.enable 'automap events'
       bus = require(base.app.get 'bus')
@@ -196,11 +207,9 @@ module.exports = (port,app) ->
   # wire-up mvz and the app into zappa context and start app when ready
   zappa.app -> 
     zapp = this
-    zapp.log = ->
     mvz.call zapp, startApp = (loadCQRS) ->
       app.call zapp, startServer = ->
         zapp.server.listen port || 3000
-        zapp.log = zapp.log || ->
         loadCQRS()
-        zapp.log 'Express server listening on port %d in %s mode',
+        zapp.log.info 'Express server listening on port %d in %s mode',
           zapp.server.address()?.port, zapp.app.settings.env

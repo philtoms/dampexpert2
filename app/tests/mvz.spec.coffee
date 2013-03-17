@@ -18,6 +18,7 @@ mvz = injectr "./src/mvz.coffee",
           address:->
         app:
           set:->
+          get:logSpy
           settings:env:'test'
           include:->
   ,{
@@ -29,7 +30,6 @@ mvz = injectr "./src/mvz.coffee",
   }
 
 sut = null
-
 beforeEach ->
   getSpy.reset()
   ctxSpy.reset()
@@ -54,6 +54,9 @@ describe "ready application", ->
   it "should be listening on expected port", ->
     expect(listenSpy).toHaveBeenCalledWith(3001)
 
+  it "should have established logging", ->
+    expect(logSpy).toHaveBeenCalledWith('loglevel')
+    
 describe "included zappa modules", ->
 
   beforeEach ->
