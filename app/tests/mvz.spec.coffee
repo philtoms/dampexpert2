@@ -13,16 +13,15 @@ mvz = injectr "./src/mvz.coffee",
         enabled:->
         get:getSpy
         ctx:ctxSpy
-        server:
-          listen:listenSpy
-          address:->
         app:
+          server:
+            listen:listenSpy
+            address:->
           set:->
           get:logSpy
           settings:env:'test'
           include:->
   ,{
-    #console:log: ->
     console: console
     module:parent:filename:path.join(__dirname,"/mvz.spec.coffee")
     __filename:__filename

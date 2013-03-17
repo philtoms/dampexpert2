@@ -12,9 +12,8 @@ mvz = (startApp) ->
   # default all logs to console
   @log = logger = (m) -> console.log m
   loglevel=2
-  loglevels = {'info':1,'warn':2,'error':3}
-  logger.debug = (m) -> logger m
-  for k,v of loglevels
+  loglevels = {'debug':0,'info':1,'warn':2,'error':3}
+  for k,v of loglevels 
     do (k,v) ->
       logger[k] = (m) -> logger m if v>=loglevel
     
@@ -64,7 +63,7 @@ mvz = (startApp) ->
     
     @['on'] = (obj) ->
       ctx=this
-      onCQRSload ->
+      onload ->
         for k,h of obj
           handlers[k]=h
           obj[k]= (cdata, errh) ->
@@ -184,32 +183,30 @@ mvz = (startApp) ->
     extend.call this, obj
     return
 
-  loadCQRS = ->
-    debugger
-    loglevel = loglevels[base.app.get 'loglevel'] || loglevel
+  ready = (port) ->
+    loglevel = loglevels[@get 'loglevel'] || loglevel
     if not bus and base.enabled 'cqrs' 
       base.enable 'automap events'
-      bus = require(base.app.get 'bus')
-      models = require(base.app.get 'model-store')
-      require(base.app.get 'cqrs').call base, bus
-      require(base.app.get 'eventsource').call base if base.enabled 'eventsource'
+      bus = require(@get 'bus')
+      models = require(@get 'model-store')
+      require(@get 'cqrs').call base, bus
+      require(@get 'eventsource').call base if base.enabled 'eventsource'
       bus.log = models.log = base.log
     fn() for fn in loadQ
+    @server.listen port || 3000
+    logger.info 'Express server listening on port %d in %s mode',
+      @server.address()?.port, @settings.env
       
-  onCQRSload = (fn) ->
-      if bus or not base.enabled 'cqrs' then fn()
-      loadQ.push fn
+  onload = (fn) ->
+    if bus or not base.enabled 'cqrs' then fn()
+    loadQ.push fn
     
-  # go
-  startApp.call this,loadCQRS
+  startApp.call this,ready
     
 module.exports = (port,app) -> 
   # wire-up mvz and the app into zappa context and start app when ready
   zappa.app -> 
     zapp = this
-    mvz.call zapp, startApp = (loadCQRS) ->
+    mvz.call zapp, startApp = (ready) ->
       app.call zapp, startServer = ->
-        zapp.server.listen port || 3000
-        loadCQRS()
-        zapp.log.info 'Express server listening on port %d in %s mode',
-          zapp.server.address()?.port, zapp.app.settings.env
+        ready.call zapp.app, port

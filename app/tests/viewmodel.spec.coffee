@@ -15,10 +15,10 @@ mvz = injectr.call this, "./src/mvz.coffee",
         all:->
         get:->
         on:(obj)->emit[k]=v for k,v of obj
-        server:
-          listen:->
-          address:->
         app:
+          server:
+            listen:->
+            address:->
           set:(o)-> setValues[k]=v for k,v of o
           get:(k)-> setValues[k]
           settings:env:'test'

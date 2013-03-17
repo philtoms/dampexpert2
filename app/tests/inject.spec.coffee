@@ -5,14 +5,14 @@ mvz = injectr "./src/mvz.coffee",
   'zappajs':app: (fn) ->
       fn.call
         enabled:->
-        server:
-          listen:->
-          address:->
         app:
           set:->
           get:->
           settings:env:'test'
           include:->
+          server:
+            listen:->
+            address:->
   ,{
     console: console
     module:parent:filename:path.join(__dirname,"/mvz.spec.coffee")
