@@ -11,7 +11,6 @@ mvz = injectr "./src/mvz.coffee",
   'zappajs':app: (fn) ->
       fn.call
         enabled:->
-        all:->
         get:getSpy
         ctx:ctxSpy
         server:
@@ -62,7 +61,7 @@ describe "included zappa modules", ->
     
   it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.ctx).toHaveBeenCalledWith(sut)
- 
+    
 describe "nested zappa modules included in previously included modules", ->
 
   beforeEach ->
@@ -81,7 +80,25 @@ describe "included modules that override previosuly named extensions", ->
     
   it "should override existing members", ->
     expect(ctxSpy).toHaveBeenCalledWith(456)
-  
+    
+describe "extensions", ->
+  _ext=null
+  beforeEach ->
+    sut.include './includes/includeextension'
+    _ext = ctxSpy.calls[0].args[0]
+
+  it "should be named", ->
+    expect(_ext.name).toEqual('includeextension')
+    
+describe "extensions with name overrides", ->
+  _ext=null
+  beforeEach ->
+    sut.include './includes/includeextensionwithnameoverride'
+    _ext = ctxSpy.calls[0].args[0]
+
+  it "should have the override name", ->
+    expect(_ext.name).toEqual('nameoverride')
+    
 describe "extension modules that extend extension point modules", ->
   _super=null
   _child=null
@@ -108,7 +125,6 @@ describe "nested extention points", ->
     
   it "should all be included in extenstion", ->
     ext=null
-    debugger
     sut.extend p1:p2:p3:-> ext=this
     expect(ext.f1).toBeDefined()
     expect(ext.f2).toBeDefined()
