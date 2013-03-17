@@ -21,6 +21,8 @@ mvz = (startApp) ->
   bus=null
   models=null
   extensions = {} 
+  iocContainer = []
+  loadQ = []
   
   extensions['controller'] = (_super) ->
     ctx = this
@@ -121,42 +123,58 @@ mvz = (startApp) ->
       do(verb) ->
         ctx[verb] = (args...) ->
           base[verb].call ctx, args[0]
-          
-  extensions['inject'] = (_super) ->
-  
-  @include = (name, regname) ->
-    if typeof name is 'object'
-      for k,v of name
-        return @include v,k
-        
-    sub = require path.join(root, name)
-    if sub.extend
-      @extend sub.extend, regname || name
-    if sub.include
-      sub.include.apply(this, [this])
+   
+  @include = (name) ->
+    obj = name
+    if typeof obj isnt 'object'
+      obj = {}
+      obj[basename(name)]=name
+    for k,v of obj
+      sub = require path.join(root, v)
+      if sub.extend
+        obj[k]=sub.extend
+        @extend obj
+      if sub.include
+        sub.include.apply this
     return
 
-  @extend = (obj,name) ->
-    for k,v of obj 
-      if (typeof v is 'object')
-        return @extend v,k
-
-      extend = extensions[k]
-      if extend
-        name = basename(name)
+  @extend = (obj) ->
+    extend = (obj, ctx) ->
+      for name,ctor of obj
+        if name is 'inject'
+          iocContainer.push ctor
+          return ctx
+          
+        extension = extensions[name]
+        if ctx
+          if extension
+            extension.call ctx, this
+          else
+            ctx.name = name
+          if typeof ctor is 'object'
+            return extend.call this, ctor, ctx
+          ctor.call ctx
+          return ctx
+            
         ctx = constructor: (_super) ->
           @log = base.log
           @name=name
           @app = base
           @[verb] = base[verb] for verb in ['include', 'extend']
-          extend.apply this,[_super]
-          v.call this
-
-        extensions[name]=ctx.constructor 
-        new ctx.constructor this
-        return
+          if extension
+            extension.call this,_super,ctor
+          if typeof ctor is 'object'
+            return extend.call _super, ctor, this
+          ioc.call this for ioc in iocContainer
+          ctor.call this
+          return this
+          
+        extensions[name]=ctx.constructor if not extensions[name]
+        return new ctx.constructor this
         
-  onLoad = []
+    extend.call this, obj
+    return
+        
   loadCQRS = ->
     if not bus and base.enabled 'cqrs' 
       base.enable 'automap events'
@@ -165,11 +183,11 @@ mvz = (startApp) ->
       require(base.app.get 'cqrs').call base, bus
       require(base.app.get 'eventsource').call base if base.enabled 'eventsource'
       bus.log = models.log = base.log
-    go() for go in onLoad
+    fn() for fn in loadQ
       
-  onCQRSload = (go) ->
-      if bus or not base.enabled 'cqrs' then go()
-      onLoad.push go
+  onCQRSload = (fn) ->
+      if bus or not base.enabled 'cqrs' then fn()
+      loadQ.push fn
     
   # go
   startApp.call this,loadCQRS
