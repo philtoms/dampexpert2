@@ -23,7 +23,7 @@ mvz = injectr "./src/mvz.coffee",
           include:->
   ,{
     console: console
-    module:parent:filename:path.join(__dirname,"/mvz.spec.coffee")
+    module:parent:filename:path.join(__dirname,"../src/x")
     __filename:__filename
     __dirname:__dirname
   }
@@ -59,7 +59,7 @@ describe "ready application", ->
 describe "included zappa modules", ->
 
   beforeEach ->
-    sut.include './includes/includezappa'
+    sut.include '../tests/includes/includezappa'
     
   it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.ctx).toHaveBeenCalledWith(sut)
@@ -67,7 +67,7 @@ describe "included zappa modules", ->
 describe "nested zappa modules included in previously included modules", ->
 
   beforeEach ->
-    sut.include './includes/includenested'
+    sut.include '../tests/includes/includenested'
     
   it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.ctx).toHaveBeenCalledWith(sut)
@@ -78,7 +78,7 @@ describe "included modules that override previosuly named extensions", ->
     sut.extend x:controller:-> 
       @val = 123
       @ctx = -> @app.ctx @val
-    sut.include './includes/includeoverride'
+    sut.include '../tests/includes/includeoverride'
     
   it "should override existing members", ->
     expect(ctxSpy).toHaveBeenCalledWith(456)
@@ -86,7 +86,7 @@ describe "included modules that override previosuly named extensions", ->
 describe "extensions", ->
   _ext=null
   beforeEach ->
-    sut.include './includes/includeextension'
+    sut.include '../tests/includes/includeextension'
     _ext = ctxSpy.calls[0].args[0]
 
   it "should be named", ->
@@ -95,7 +95,7 @@ describe "extensions", ->
 describe "extensions with name overrides", ->
   _ext=null
   beforeEach ->
-    sut.include './includes/includeextensionwithnameoverride'
+    sut.include '../tests/includes/includeextensionwithnameoverride'
     _ext = ctxSpy.calls[0].args[0]
 
   it "should have the override name", ->
@@ -105,8 +105,8 @@ describe "extension modules that extend extension point modules", ->
   _super=null
   _child=null
   beforeEach ->
-    sut.include './includes/includeextension'
-    sut.include './includes/extendincludeextension'
+    sut.include '../tests/includes/includeextension'
+    sut.include '../tests/includes/extendincludeextension'
     _super = ctxSpy.calls[0].args[0]
     _child = ctxSpy.calls[1].args[0]
 

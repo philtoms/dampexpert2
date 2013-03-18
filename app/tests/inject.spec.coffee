@@ -15,7 +15,7 @@ mvz = injectr "./src/mvz.coffee",
             address:->
   ,{
     console: console
-    module:parent:filename:path.join(__dirname,"/mvz.spec.coffee")
+    module:parent:filename:path.join(__dirname,"../src/x")
     __filename:__filename
     __dirname:__dirname
   }
@@ -33,7 +33,7 @@ describe "ioc container", ->
       expect(@x).toBeDefined()
       
   it "should inject included ioc extensions", ->
-    sut.include './includes/includeinject'
+    sut.include '../tests/includes/includeinject'
     sut.extend viewmodel:->
       expect(@x).toBeDefined()
       

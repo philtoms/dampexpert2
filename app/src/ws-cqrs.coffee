@@ -26,3 +26,6 @@ module.exports = (bus) ->
     for k, v of obj
       ws_handler[k] = router {message:k,handler:v}
       _on.call ctx, ws_handler
+  
+  @reset = ->
+    bus.reset()

@@ -4,9 +4,9 @@ injectr = require "injectr"
 emit = {}
 setValues = {}
 errors = []
-models = {}
-bus={}
-mvz = injectr.call this, "./src/mvz.coffee",  
+vmodel = null
+
+mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),  
   'zappajs': app: (fn) ->
       fn.call
         enabled:(k) -> if setValues[k] then setValues[k] else false
@@ -22,22 +22,17 @@ mvz = injectr.call this, "./src/mvz.coffee",
           set:(o)-> setValues[k]=v for k,v of o
           get:(k)-> setValues[k]
           settings:env:'test'
-  './ws-cqrs': require('../src/ws-cqrs')  
-  './memory-bus': bus=require('../src/memory-bus')  
-  './eventsource': require('../src/eventsource')  
   './memory-store': 
     load: (id,cb) -> 
-      model = models[id]
-      if not model
+      if not vmodel
         errors.push id
-      cb null,models[id]
+      cb null,vmodel
     store: (model,cb) -> 
-      models[model.id]=model
-      cb? null,model.id
+      vmodel=model
+      cb? null,vmodel.id
   ,{
-    #console:log: ->
     console: console
-    module:parent:filename:path.join(__dirname,"/model.spec.coffee")
+    module:parent:filename:path.join(__dirname,"../src/x")
     __filename:__filename
     __dirname:__dirname
   }
@@ -52,11 +47,12 @@ mvz 3001, (ready) ->
     @on cmd:-> 
       m1 = this
   ready()
-emit['cmd']()
+emit.cmd()
 
 beforeEach ->
   sut.enable 'automap events'
-  bus.reset()
+  sut.reset()
+  vmodel=null
   
 describe "model state mappings", ->
  
@@ -80,7 +76,7 @@ describe "extended model", ->
       @map 'f2':'abc'
       @on cmd:-> 
         m2 = this
-    emit['cmd']()
+    emit.cmd()
     
   it "should inherit base model mappings", ->
     expect(m2.f1).toEqual(123)
@@ -91,7 +87,7 @@ describe "extended model", ->
 describe "included extended model", ->
 
   beforeEach ->
-    sut.include 'includes/extendmodel'
+    sut.include '../tests/includes/extendmodel'
     emit['excmd']()
     
   it "should be accessible in calling context", ->
@@ -106,7 +102,7 @@ describe "publishing without an event handler with automap switched on", ->
       @on cmd:->
         m2 = this
         @publish evnt3:{f2:'def'}
-    emit['cmd']()
+    emit.cmd()
     
   it "should automap mapped properties", ->
     expect(m2.f2).toEqual('def')
@@ -121,7 +117,7 @@ describe "publishing without an event handler with automap switched off", ->
       @on cmd:->
         m2 = this
         @publish evnt3:{f1:'abc'}
-    emit['cmd']()
+    emit.cmd()
     
   it "should not automap to model state", ->
     expect(m2.f1).toEqual(123)
@@ -138,7 +134,7 @@ describe "publishing to an explicit event handler", ->
         m2 = this
         @publish evnt:{f1:'abc', f2:'def'}
       @on evnt:->@f2=345
-    emit['cmd']()
+    emit.cmd()
     
   it "should not automap to model state", ->
     expect(m2.f1).toEqual(123)
@@ -146,7 +142,7 @@ describe "publishing to an explicit event handler", ->
   it "should not automap to viewmodel", ->
     expect(sut.viewmodel.f2).toEqual(345)
 
-describe "a commanmd with an unknown id", ->
+xdescribe "a commanmd with an unknown id", ->
 
   m2 = null
   beforeEach ->
@@ -154,8 +150,8 @@ describe "a commanmd with an unknown id", ->
       @on cmd:(d)->
         m2 = this
         @publish evnt:{f1:d.v}
-    emit['cmd'] {v:'abc'}
-    emit['cmd'] {id:78,v:'def'}
+    emit.cmd {v:'abc'}
+    emit.cmd {id:78,v:'def'}
       
   it "should log the error and swallow the action", ->
     expect(errors.pop()).toEqual(78)
@@ -165,11 +161,11 @@ describe "invoking a model through a commanmd", ->
 
   m2 = null
   beforeEach ->
+    vmodel = {f1:'abc'}
     sut.extend m1:->
       @on cmd: (v)->
         m2 = this
-        @publish evnt:{f1:v}
-    emit['cmd'] 'abc'
+    emit.cmd()
     
   it "should rehydrate its modelstate", ->
     expect(m2.f1).toEqual('abc')

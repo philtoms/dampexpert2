@@ -3,17 +3,12 @@ injectr = require "injectr"
 
 emit = {}
 setValues = {}
-errors = []
-models = {}
-bus={}
-mvz = injectr.call this, "./src/mvz.coffee",  
+
+mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),  
   'zappajs': app: (fn) ->
       fn.call
         enabled:(k) -> if setValues[k] then setValues[k] else false
         enable:(k) -> setValues[k]=true
-        disable:(k) -> if setValues[k] then setValues[k]=false
-        all:->
-        get:->
         on:(obj)->emit[k]=v for k,v of obj
         app:
           server:
@@ -22,14 +17,9 @@ mvz = injectr.call this, "./src/mvz.coffee",
           set:(o)-> setValues[k]=v for k,v of o
           get:(k)-> setValues[k]
           settings:env:'test'
-  './ws-cqrs': require('../src/ws-cqrs')  
-  './memory-bus': bus=require('../src/memory-bus')  
-  './eventsource': require('../src/eventsource')  
-  './memory-store': require('../src/memory-store')
   ,{
-    #console:log: ->
     console: console
-    module:parent:filename:path.join(__dirname,"/model.spec.coffee")
+    module:parent:filename:path.join(__dirname,"../src/x")
     __filename:__filename
     __dirname:__dirname
   }
@@ -44,10 +34,13 @@ mvz 3001, (ready) ->
       @publish evnt:789
   ready()
 
+beforeEach ->
+  sut.reset()
+  
 describe "viewmodels", ->
  
   it "should subscribe to model events", ->
     sut.extend viewmodel:->
       @on evnt:(d)->
         expect(d).toEqual(789)
-    emit['cmd']()    
+    emit.cmd()    
