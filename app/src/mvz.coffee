@@ -10,12 +10,13 @@ mvz = (startApp) ->
   base = this
   
   # default all logs to console
-  @log = logger = (m) -> console.log m
-  loglevel=2
-  loglevels = {'debug':0,'info':1,'warn':2,'error':3}
-  for k,v of loglevels 
-    do (k,v) ->
-      logger[k] = (m) -> logger m if v>=loglevel
+  log = ->
+    level=1
+    @log = log = (m) -> console.log m
+    log.setlevel = (lvl) -> level = lvl || level
+    for k,v of {'debug':0,'info':1,'warn':2,'error':3}
+      do (k,v) ->
+        log[k] = (m) -> log m if v>=level
     
   root = path.dirname(module.parent.filename)
   #base.app.set("views",path.join(root,"views"))
@@ -29,7 +30,7 @@ mvz = (startApp) ->
   bus=null
   models=null
   extensions = {} 
-  iocContainer = []
+  iocContainer = {log:log}
   loadQ = []
   
   extensions['controller'] = (_super) ->
@@ -150,7 +151,7 @@ mvz = (startApp) ->
     extend = (obj, ctx) ->
       for name,ctor of obj
         if name is 'inject'
-          iocContainer.push ctor
+          iocContainer[ctx?.name || 'ioc'+iocContainer.length] = ctor
           return ctx
           
         extension = extensions[name]
@@ -165,15 +166,14 @@ mvz = (startApp) ->
           return ctx
             
         ctx = constructor: (_super) ->
-          @log = base.log
           @name=name
           @app = base
           @[verb] = base[verb] for verb in ['include', 'extend']
           if extension
             extension.call this,_super,ctor
+          ioc.call this for k,ioc of iocContainer
           if typeof ctor is 'object'
             return extend.call _super, ctor, this
-          ioc.call this for ioc in iocContainer
           ctor.call this
           return this
           
@@ -183,9 +183,13 @@ mvz = (startApp) ->
     extend.call this, obj
     return
 
+  if base.enabled 'cqrs' 
+    base.enable 'automap events'
+    
   ready = (port) ->
-    loglevel = loglevels[@get 'loglevel'] || loglevel
-    if not bus and base.enabled 'cqrs' 
+    iocContainer.log.call base
+    log.setlevel @get 'loglevel'
+    if base.enabled 'cqrs' 
       base.enable 'automap events'
       bus = require(@get 'bus')
       models = require(@get 'model-store')
@@ -194,7 +198,7 @@ mvz = (startApp) ->
       bus.log = models.log = base.log
     fn() for fn in loadQ
     @server.listen port || 3000
-    logger.info 'Express server listening on port %d in %s mode',
+    base.log.info 'Express server listening on port %d in %s mode',
       @server.address()?.port, @settings.env
       
   onload = (fn) ->

@@ -1,7 +1,7 @@
 path = require "path"
 injectr = require "injectr"
 
-logSpy = createSpy "log"
+logSpy = createSpy("log").andReturn null
 listenSpy = createSpy "listen"
 notReadySpy = createSpy "not ready"
 getSpy = createSpy 'get'

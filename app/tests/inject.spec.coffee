@@ -7,23 +7,14 @@ mvz = injectr "./src/mvz.coffee",
         enabled:->
         app:
           set:->
-          get:->
-          settings:env:'test'
-          include:->
-          server:
-            listen:->
-            address:->
   ,{
     console: console
     module:parent:filename:path.join(__dirname,"../src/x")
-    __filename:__filename
-    __dirname:__dirname
   }
 
 sut = null
 mvz 3001, (ready) ->
   sut = this
-  ready()
 
 describe "ioc container", ->
  
@@ -38,9 +29,9 @@ describe "ioc container", ->
       expect(@x).toBeDefined()
       
   it "should inject extensions that override default behaviour", ->
-    sut.extend inject:->
-      @x=->''
-      @log = (m) -> @x = m
-      @log 'xyz'
+    sut.extend log:inject:->
+      @log = (m) -> @x()
     sut.extend viewmodel:->
-      expect(@x).toEqual('xyz')
+      @x=createSpy()
+      @log 'xyz'
+      expect(@x).toHaveBeenCalled()
