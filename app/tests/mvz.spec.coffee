@@ -131,3 +131,23 @@ describe "nested extention points", ->
     expect(ext.f1).toBeDefined()
     expect(ext.f2).toBeDefined()
     expect(ext.f3).toBeDefined()
+
+describe "registered components", ->
+  beforeEach ->
+    sut.include '../tests/includes/newcomponent'
+    
+  it "should be extensible", ->
+    ext=null
+    sut.extend newcomponent:-> ext=this
+    expect(ext.f1).toEqual(1)
+
+describe "registered override components", ->
+  beforeEach ->
+    sut.include '../tests/includes/newcomponent'
+    sut.include '../tests/includes/overridecomponent'
+    
+  it "should be extensible", ->
+    ext=null
+    sut.extend newcomponent:-> ext=this
+    expect(ext.f1).toEqual(2)
+

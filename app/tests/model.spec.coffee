@@ -3,8 +3,6 @@ injectr = require "injectr"
 
 emit = {}
 setValues = {}
-errors = []
-vmodel = null
 
 mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),  
   'zappajs': app: (fn) ->
@@ -22,14 +20,6 @@ mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),
           set:(o)-> setValues[k]=v for k,v of o
           get:(k)-> setValues[k]
           settings:env:'test'
-  './memory-store': 
-    load: (id,cb) -> 
-      if not vmodel
-        errors.push id
-      cb null,vmodel
-    store: (model,cb) -> 
-      vmodel=model
-      cb? null,vmodel.id
   ,{
     console: console
     module:parent:filename:path.join(__dirname,"../src/x")
@@ -52,6 +42,7 @@ emit.cmd()
 beforeEach ->
   sut.enable 'automap events'
   sut.reset()
+  sut.viewmodel={}
   vmodel=null
   
 describe "model state mappings", ->
@@ -61,12 +52,6 @@ describe "model state mappings", ->
 
   it "should be null if no optional value supplied", ->
     expect(m1.f2).toEqual(null)
-
-describe "viewmodel data", ->
- 
-  it "should be accessible in calling context", ->
-    expect(sut.viewmodel.f1).toEqual(123)
-    expect(sut.viewmodel.f2).toEqual(null)
 
 describe "extended model", ->
 
@@ -88,6 +73,7 @@ describe "included extended model", ->
 
   beforeEach ->
     sut.include '../tests/includes/extendmodel'
+    debugger
     emit['excmd']()
     
   it "should be accessible in calling context", ->
@@ -139,9 +125,6 @@ describe "publishing to an explicit event handler", ->
   it "should not automap to model state", ->
     expect(m2.f1).toEqual(123)
     
-  it "should not automap to viewmodel", ->
-    expect(sut.viewmodel.f2).toEqual(345)
-
 xdescribe "a commanmd with an unknown id", ->
 
   m2 = null
@@ -158,17 +141,14 @@ xdescribe "a commanmd with an unknown id", ->
     expect(m2.f1).toEqual('abc')
     
 describe "invoking a model through a commanmd", ->
-
-  m2 = null
-  beforeEach ->
-    vmodel = {f1:'abc'}
-    sut.extend m1:->
-      @on cmd: (v)->
-        m2 = this
-    emit.cmd()
     
   it "should rehydrate its modelstate", ->
-    expect(m2.f1).toEqual('abc')
+    sut.extend m1:->
+      @on cmd: (v)->
+        @publish evnt:{f1:'abc'}
+      @on evnt:->
+        expect(@f1).toEqual('abc')
+    emit.cmd()
     
 describe "eot", ->
   xit "x", -> console.log id for id of models
