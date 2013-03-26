@@ -1,2 +1,2 @@
 @include = ->
-  @ctx this
+  @app.ctx this

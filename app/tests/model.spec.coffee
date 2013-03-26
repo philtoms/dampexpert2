@@ -57,7 +57,6 @@ describe "extended model", ->
 
   m2 = null
   beforeEach ->
-    debugger
     sut.extend m1:->
       @map 'f2':'abc'
       @on cmd:-> 
@@ -74,7 +73,6 @@ describe "included extended model", ->
 
   beforeEach ->
     sut.include '../tests/includes/extendmodel'
-    debugger
     emit['excmd']()
     
   it "should be accessible in calling context", ->

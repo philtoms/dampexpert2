@@ -13,8 +13,8 @@ mvz = injectr "./src/mvz.coffee",
         enabled:->
         enable:->
         get:getSpy
-        ctx:ctxSpy
         app:
+          ctx:ctxSpy
           server:
             listen:listenSpy
             address:->
@@ -64,7 +64,7 @@ describe "included zappa modules", ->
     sut.include '../tests/includes/includezappa'
     
   it "should be in mvz context with immediate access to zappa members", ->
-    expect(sut.ctx).toHaveBeenCalledWith(sut)
+    expect(sut.app.ctx).toHaveBeenCalledWith(sut)
     
 describe "nested zappa modules included in previously included modules", ->
 
@@ -72,7 +72,7 @@ describe "nested zappa modules included in previously included modules", ->
     sut.include '../tests/includes/includenested'
     
   it "should be in mvz context with immediate access to zappa members", ->
-    expect(sut.ctx).toHaveBeenCalledWith(sut)
+    expect(sut.app.ctx).toHaveBeenCalledWith(sut)
   
 describe "included modules that override previosuly named extensions", ->
 
@@ -116,7 +116,7 @@ describe "extension modules that extend extension point modules", ->
     expect(_child.includeCtx).toBeDefined()
 
   it "should be in extension context", ->
-    expect(sut.ctx).toHaveBeenCalledWith(_child)
+    expect(sut.app.ctx).toHaveBeenCalledWith(_child)
 
   it "should not extend extension point context", ->
     expect(_super.extendCtx).not.toBeDefined()

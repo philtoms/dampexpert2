@@ -1,29 +1,32 @@
 uuid = require('node-uuid')
 
 _publish=null
+models = null
 
 @include = model: (base,_super) ->
 
   handlers={}
   mappings={}
-  viewdata = {}
   init={}
   modelId = uuid.v4()
   
-  if not models
-    models = require(base.app.get 'model-store')
-  
+  if base.enabled 'eventsourcing'
+    # bind eventsource wrapper to this model
+    models = require(base.app.get 'eventsourcing').apply base, [mapViewData(init),handlers]
+  else
+    models = models || require(base.app.get 'model-store')
+
   @['on'] = (obj) ->
     for k,h of obj
       handlers[k]=h
-      obj[k]= (cdata) =>
+      obj[k]= (cmd) =>
         _publish=_publish || @publish
-        id = cdata?.id || modelId
+        id = cmd?.id || modelId
         models.load id, (err,state) ->
           if (err or not state)
             state = init
-            if cdata?.id?
-              return base.log.error "Model aggregate not found for id #{cdata.id}"
+            if cmd?.id? # ie - we have a command but not a model
+              return base.log.error "Model aggregate not found for id #{cmd.id}"
             
           model = mapViewData(state, model)
           model.id=id
@@ -37,7 +40,7 @@ _publish=null
             models.store mapViewData(model)
             if _super.viewmodel then _super.viewmodel = mapViewData(model)
           # switch to model context in handlers
-          handlers[k].call model,cdata
+          handlers[k].call model,cmd
         
     base['on'].call @, obj
 

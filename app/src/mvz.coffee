@@ -55,7 +55,7 @@ mvz = (startApp) ->
             
         ctx = constructor: (_super) ->
           @name = name
-          @app = base
+          @app = base.app
           @[verb] = base[verb] for verb in ['include', 'extend']
           ioc.call this,base for k,ioc of iocContainer
           if extension
@@ -96,7 +96,6 @@ mvz = (startApp) ->
     if base.enabled 'cqrs' 
       bus = require(@get 'bus')
       require(@get 'cqrs').call base, bus
-      require(@get 'eventsource').call base if base.enabled 'eventsource'
       bus.log = base.log
       
     fn() for fn in loadQ

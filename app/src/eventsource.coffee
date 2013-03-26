@@ -1,29 +1,49 @@
 uuid = require('node-uuid')
+models=null
 
-module.exports = ->
+module.exports = (init,handlers) ->
 
-  #repo = @repo || require('nstore.events')
+  models = models || require(@app.get 'model-store')
 
+  eventStore = {
+    load:(id,cb)-> models.query id, (events) ->
+      aggregate = {}
+      for k,v of init
+        aggregate[k]=v
+      for e in events
+        name = e.id.split('/')[2]
+        if handlers[name]
+          e.id=e.id.split('/')[0]
+          handlers[name].call aggregate,e
+      cb null,aggregate
+      
+    store:(model,cb)-> 
+      # cache the model?
+      models.store model,cb
+  }
+  
   _on = @on
   @on = (obj) ->
     ctx = this
+    _publish = null
+    es_publish = (obj, cb) ->
+      _publish.apply ctx,[obj,cb]
+      for k, v of obj
+        eventid = "#{v.id}/#{uuid.v1()}/#{k}"
+        ctx.log.debug "storing #{eventid}"
+        models.store(eventid,v, -> cb? v.id)
+
     router = (obj) ->
       ctx.log.debug "es wrapping #{obj.message}"
-      return (data,err) ->
-        _publish = @publish
-        @publish = (obj, cb) ->
-          _publish.apply ctx,[obj,cb]
-          for k, v of obj
-            if not k.id?
-              evntKey = {event:k,id:uuid.v4()}
-              ctx.log.debug "storing #{k},#{evntKey.id} : #{v}"
-              #repo.store(evntKey,v, -> cb? v.id)        
-            else
-              ctx.log.debug "already stored #{k},#{evntKey.id} : #{v}"
-                
-        obj.handler.call ctx, data, err
+      
+      return (data) ->
+        _publish = _publish || @publish
+        @publish = es_publish
+        obj.handler.call ctx, data
                     
     es_handler = {}
     for k, v of obj
       es_handler[k] = router {message:k,handler:v}
       _on.call ctx, es_handler
+  
+  return eventStore
