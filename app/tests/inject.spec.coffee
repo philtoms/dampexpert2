@@ -5,6 +5,7 @@ mvz = injectr "./src/mvz.coffee",
   'zappajs':app: (fn) ->
       fn.call
         enabled:->
+        enable:->
         app:
           set:->
   ,{

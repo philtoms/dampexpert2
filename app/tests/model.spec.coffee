@@ -57,6 +57,7 @@ describe "extended model", ->
 
   m2 = null
   beforeEach ->
+    debugger
     sut.extend m1:->
       @map 'f2':'abc'
       @on cmd:-> 

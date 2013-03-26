@@ -12,11 +12,6 @@ mvz = (startApp) ->
   #base.app.set("views",path.join(root,"views"))
   basename = (name) -> path.basename(path.basename(name || __filename,'.coffee'),'.js')
 
-  @app.set bus:'./memory-bus'
-  @app.set cqrs:'./ws-cqrs'
-  @app.set eventsource:'./eventsource'
-  @app.set 'model-store':'./memory-store'
-
   bus=null
   extensions = {} 
   iocContainer = {}
@@ -78,17 +73,24 @@ mvz = (startApp) ->
       
     return
 
-  if base.enabled 'cqrs' 
-    base.enable 'automap events'
+  onload = (fn) ->
+    loadQ.push fn
+    
+  base.include './controller'
+  base.include './viewmodel'
+  base.include './model'
+  base.include './log'
+  
+  base.enable 'automap events'
+  
+  @app.set cqrs:'./ws-cqrs'
+  @app.set eventsource:'./eventsource'
+  @app.set bus:'./memory-bus'
+  @app.set 'model-store':'./memory-store'
 
   ready = (port) ->
-
-    base.include './controller'
-    base.include './viewmodel'
-    base.include './model'
-
-    base.include './log'
-    loadQ.pop()()
+  
+    loadQ.shift()()
     iocContainer.log.apply base, [base]
     
     if base.enabled 'cqrs' 
@@ -96,15 +98,14 @@ mvz = (startApp) ->
       require(@get 'cqrs').call base, bus
       require(@get 'eventsource').call base if base.enabled 'eventsource'
       bus.log = base.log
+      
     fn() for fn in loadQ
+    onload = (fn) -> fn()
+
     @server.listen port || 3000
     base.log.info 'Express server listening on port %d in %s mode',
       @server.address()?.port, @settings.env
       
-  onload = (fn) ->
-    if bus or not base.enabled 'cqrs' then fn()
-    loadQ.push fn
-    
   startApp.apply this, [ready]
     
 module.exports = (port,app) -> 
