@@ -6,7 +6,7 @@ module.exports = (init,handlers) ->
   models = models || require(@app.get 'model-store')
 
   eventStore = {
-    load:(id,cb)-> models.query id, (events) ->
+    load:(id,cb)-> models.query id, (err,events) ->
       aggregate = {}
       for k,v of init
         aggregate[k]=v
@@ -39,7 +39,7 @@ module.exports = (init,handlers) ->
       return (data) ->
         _publish = _publish || @publish
         @publish = es_publish
-        obj.handler.call ctx, data
+        obj.handler.call @, data
                     
     es_handler = {}
     for k, v of obj

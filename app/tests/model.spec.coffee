@@ -41,6 +41,7 @@ emit.cmd()
 
 beforeEach ->
   sut.enable 'automap events'
+  sut.disable "eventsourcing"
   sut.reset()
   sut.viewmodel={}
   vmodel=null
@@ -124,30 +125,42 @@ describe "publishing to an explicit event handler", ->
   it "should not automap to model state", ->
     expect(m2.f1).toEqual(123)
     
-xdescribe "a commanmd with an unknown id", ->
+describe "a commanmd with an unknown id", ->
 
   m2 = null
   beforeEach ->
     sut.extend m1:->
       @on cmd:(d)->
-        m2 = this
         @publish evnt:{f1:d.v}
-    emit.cmd {v:'abc'}
     emit.cmd {id:78,v:'def'}
       
-  it "should log the error and swallow the action", ->
+  xit "should log the error and swallow the action", ->
     expect(errors.pop()).toEqual(78)
-    expect(m2.f1).toEqual('abc')
     
 describe "invoking a model through a commanmd", ->
     
   it "should rehydrate its modelstate", ->
     sut.extend m1:->
-      @on cmd: (v)->
-        @publish evnt:{f1:'abc'}
-      @on evnt:->
+      @on cmd: ->
+        @publish evnt1:""
+      @on evnt1:(e)->
+        @f1='abc'
+        @publish evnt2:""
+      @on evnt2:->
         expect(@f1).toEqual('abc')
+    debugger
+    emit.cmd()
+
+describe "event sourced model", ->
+
+  m2 = null
+  beforeEach ->
+    sut.enable "eventsourcing"
+    sut.extend m1:->
+      @map 'f2':'abc'
+      @on cmd:-> 
+        m2 = this
     emit.cmd()
     
-describe "eot", ->
-  xit "x", -> console.log id for id of models
+  it "should inherit base model mappings", ->
+    expect(m2.f1).toEqual(123)

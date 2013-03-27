@@ -1,34 +1,38 @@
 path = require "path"
 injectr = require "injectr"
 
-publishSpy = createSpy("publish")
-  
+storeSpy = createSpy("store")
+uuid=0
+
 sut = injectr "./src/eventsource.coffee",
-  'node-uuid':v1:->1
-  'store':
-      query:(id,cb)-> cb [
+  'node-uuid':v1:->++uuid
+  'memory-store':
+      query:(id,cb)-> cb null,[
         {id:'1/1/msg',f1:1},
         {id:'1/2/msg',f1:2}
       ]
       store:(id,event,cb)->
-        console.log event
-        publishSpy(id,event)
+        storeSpy(id,event)
   ,{
     console: console
   }
-
-ctx = {
+  
+ctx=null
+beforeEach ->
+  ctx = {
     app:
-      get:createSpy("get").andReturn("store")
+      get:createSpy("get").andReturn("memory-store")
     log:debug:->
-    on:(obj) -> obj.msg(123)
     publish:(obj) ->
-}
+    on: (obj) -> obj.msg.call this,123
+  }
 
 describe "event source wrapper", ->
  
   onSpy = createSpy("on")
-  
+  beforeEach ->
+    sut.apply ctx,[]
+    
   it "should require model repository", ->
     expect(ctx.app.get).toHaveBeenCalled()
     
@@ -39,7 +43,10 @@ describe "event source wrapper", ->
     
 describe "calling event source wrapper", ->
  
-  repo = sut.apply ctx,[]
+  repo = null
+  beforeEach ->
+    repo = sut.apply ctx,[]
+  
   it "should return model repository interface", ->
     expect(repo.load).toBeDefined()
     expect(repo.store).toBeDefined()
@@ -49,13 +56,15 @@ describe "loading from event source", ->
   eventSpy = createSpy("event")
   init = {f1:123}
   aggr = {}
-  repo = sut.apply ctx,[init,{msg:(e)->@f1=e.f1;eventSpy(e)}]
-  repo.load 1,(e,a) -> aggr=a
+  
+  beforeEach ->
+    repo = sut.apply ctx,[init,{msg:(e)->@f1=e.f1;eventSpy(e)}]
+    repo.load 1,(e,a) -> aggr=a
 
   it "should call event handlers in model context", ->
     expect(eventSpy.callCount).toEqual(2)
     
-  it "should pass correct event", ->
+  it "should pass corrected event", ->
     event = eventSpy.mostRecentCall.args[0] 
     expect(event.id).toEqual('1')
     
@@ -67,8 +76,14 @@ describe "loading from event source", ->
  
  
  describe "event source publish", ->
- 
+
+  beforeEach ->
+    repo = sut.apply ctx,[]
+  
   it "should store correctly formatted events", ->
+    uuid=0
     ctx.on msg:->@publish msg:{id:1, f1:123}
+    ctx.on msg:->@publish msg:{id:1, f1:456}
     
-    expect(publishSpy).toHaveBeenCalledWith('1/1/msg',{id:1,f1:123})
+    expect(storeSpy).toHaveBeenCalledWith('1/1/msg',{id:1,f1:123})
+    expect(storeSpy).toHaveBeenCalledWith('1/2/msg',{id:1,f1:456})

@@ -5,43 +5,62 @@ models = null
 
 @include = model: (base,_super) ->
 
-  handlers={}
+  handlers={automap:(event) -> mapViewData(event,this)}
   mappings={}
   init={}
+  cache = {}
   modelId = uuid.v4()
+  eventsourcing=false
   
-  if base.enabled 'eventsourcing'
-    # bind eventsource wrapper to this model
-    models = require(base.app.get 'eventsourcing').apply base, [mapViewData(init),handlers]
-  else
-    models = models || require(base.app.get 'model-store')
-
+  loadState = (models,id,cb) ->
+    if cache[id] 
+      cache[id].ref++
+      cb null,cache[id].state
+    else
+      models.load id, (err,state) ->
+        state = state||{}
+        cache[id]={ref:1,state}
+        cb err,state
+        
+  unloadState = (id) ->
+    cache[id].ref--
+    if cache[id].ref<1 then delete cache[id]
+      
   @['on'] = (obj) ->
+  
+    if not eventsourcing and base.enabled 'eventsourcing'
+      # bind eventsource wrapper to this model
+      models = require(base.app.get 'eventsource').apply base, [mapViewData(init),handlers]
+      eventsourcing = true
+    else
+      models = models || require(base.app.get 'model-store')
+
     for k,h of obj
       handlers[k]=h
       obj[k]= (cmd) =>
         _publish=_publish || @publish
         id = cmd?.id || modelId
-        models.load id, (err,state) ->
-          if (err or not state)
-            state = init
+        loadState models, id, (err,state) ->
+          if (err or Object.keys(state).length==0)
+            mapViewData(init,state)
             if cmd?.id? # ie - we have a command but not a model
+              unloadState id
               return base.log.error "Model aggregate not found for id #{cmd.id}"
             
-          model = mapViewData(state, model)
+          model = state
           model.id=id
           model.log = base.log
           model.publish=(obj,ack) ->
             for msg,data of obj
-              data.id=model.id # no nonsense
+              data.id=id # no nonsense
               _publish.call model, obj,ack
               if base.enabled('automap events') and not handlers[msg]
                 model = mapViewData(data,model)
-            models.store mapViewData(model)
+            models.store id,mapViewData(model)
             if _super.viewmodel then _super.viewmodel = mapViewData(model)
           # switch to model context in handlers
           handlers[k].call model,cmd
-        
+        unloadState id
     base['on'].call @, obj
 
   # build a mapper
