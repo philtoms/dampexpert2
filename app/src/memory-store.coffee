@@ -7,9 +7,12 @@ mstore =
     cb null,models[id]
 
   query: (id,cb) ->
-    q = for k,v of models
-      m v if v.id.indexOf(id)==0
-    cb null, q
+    qr=[]
+    for k,v of models
+      if k.indexOf(id)==0
+        r={};r[k]=v
+        qr.push r 
+    cb null, qr
     
   store: (id,model,cb) -> 
     models[id]=model

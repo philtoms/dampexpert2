@@ -1,6 +1,6 @@
 uuid = require('node-uuid')
 models=null
-
+sequence=0
 module.exports = (init,handlers) ->
 
   models = models || require(@app.get 'model-store')
@@ -11,25 +11,25 @@ module.exports = (init,handlers) ->
       for k,v of init
         aggregate[k]=v
       for e in events
-        name = e.id.split('/')[2]
-        if handlers[name]
-          e.id=e.id.split('/')[0]
-          handlers[name].call aggregate,e
+        for k,v of e
+          name = k.split('/')[2]
+          if handlers[name]
+            handlers[name].call aggregate,v
       cb null,aggregate
       
     store:(model,cb)-> 
       # cache the model?
       models.store model,cb
   }
-  
   _on = @on
+  _publish = null
   @on = (obj) ->
     ctx = this
-    _publish = null
     es_publish = (obj, cb) ->
-      _publish.apply ctx,[obj,cb]
       for k, v of obj
-        eventid = "#{v.id}/#{uuid.v1()}/#{k}"
+        v.sequence = ++sequence
+        _publish.apply ctx,[obj,cb]
+        eventid = "#{v.id}/#{sequence}/#{k}"
         ctx.log.debug "storing #{eventid}"
         models.store(eventid,v, -> cb? v.id)
 

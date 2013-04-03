@@ -30,7 +30,7 @@ models = null
   
     if not eventsourcing and base.enabled 'eventsourcing'
       # bind eventsource wrapper to this model
-      models = require(base.app.get 'eventsource').apply base, [mapViewData(init),handlers]
+      models = require(base.app.get 'eventsource').apply this, [mapViewData(init),handlers]
       eventsourcing = true
     else
       models = models || require(base.app.get 'model-store')
@@ -38,7 +38,7 @@ models = null
     for k,h of obj
       handlers[k]=h
       obj[k]= (cmd) =>
-        _publish=_publish || @publish
+        _publish = @publish
         id = cmd?.id || modelId
         loadState models, id, (err,state) ->
           if (err or Object.keys(state).length==0)
@@ -52,7 +52,8 @@ models = null
           model.log = base.log
           model.publish=(obj,ack) ->
             for msg,data of obj
-              data.id=id # no nonsense
+              if not data then obj[msg] = {}
+              obj[msg].id=id # no nonsense
               _publish.call model, obj,ack
               if base.enabled('automap events') and not handlers[msg]
                 model = mapViewData(data,model)
@@ -75,7 +76,10 @@ models = null
       else
         mappings[k]=true
       init[k]=v
-
+      
+  # all models have an id
+  @map "id"
+  
   mapViewData = (src, dest)->
     dest = dest || {}
     for k,m of mappings

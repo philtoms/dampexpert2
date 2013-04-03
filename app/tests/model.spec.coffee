@@ -139,7 +139,19 @@ describe "a commanmd with an unknown id", ->
     
 describe "invoking a model through a commanmd", ->
     
-  it "should rehydrate its modelstate", ->
+  it "should rehydrate its model state", ->
+    sut.extend m1:->
+      @on cmd1: ->
+        @f1='abc'
+        @publish evnt:""
+      @on cmd2:->
+        expect(@f1).toEqual('abc')
+    emit.cmd1()
+    emit.cmd2()
+
+describe "model state", ->
+    
+  it "should be maintained through command scope", ->
     sut.extend m1:->
       @on cmd: ->
         @publish evnt1:""
@@ -148,19 +160,33 @@ describe "invoking a model through a commanmd", ->
         @publish evnt2:""
       @on evnt2:->
         expect(@f1).toEqual('abc')
-    debugger
     emit.cmd()
 
-describe "event sourced model", ->
-
-  m2 = null
-  beforeEach ->
+describe "invoking an event sourced model through a commanmd", ->
+    
+  it "should rehydrate its model state", ->
     sut.enable "eventsourcing"
     sut.extend m1:->
-      @map 'f2':'abc'
-      @on cmd:-> 
-        m2 = this
-    emit.cmd()
+      @on cmd1: ->
+        @publish evnt:f1:'abc'
+      @on evnt:(e)->
+        @f1=e.f1
+      @on cmd2:->
+        expect(@f1).toEqual('abc')
+    emit.cmd1()
+    emit.cmd2()
+
+describe "event sourced model state", ->
     
-  it "should inherit base model mappings", ->
-    expect(m2.f1).toEqual(123)
+  it "should be maintained through command scope", ->
+    sut.enable "eventsourcing"
+    sut.extend m1:->
+      @on cmd: ->
+        @publish evnt1:""
+      @on evnt1:(e)->
+        @f1='abc'
+        @publish evnt2:""
+      @on evnt2:->
+        expect(@f1).toEqual('abc')
+    emit.cmd()
+

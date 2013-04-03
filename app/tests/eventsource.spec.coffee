@@ -8,8 +8,8 @@ sut = injectr "./src/eventsource.coffee",
   'node-uuid':v1:->++uuid
   'memory-store':
       query:(id,cb)-> cb null,[
-        {id:'1/1/msg',f1:1},
-        {id:'1/2/msg',f1:2}
+        {'1/1/msg':{id:'1',f1:1}},
+        {'1/2/msg':{id:'1',f1:2}}
       ]
       store:(id,event,cb)->
         storeSpy(id,event)
@@ -19,12 +19,13 @@ sut = injectr "./src/eventsource.coffee",
   
 ctx=null
 beforeEach ->
+  storeSpy.reset()
   ctx = {
     app:
       get:createSpy("get").andReturn("memory-store")
     log:debug:->
-    publish:(obj) ->
-    on: (obj) -> obj.msg.call this,123
+    publish:(obj) -> "x"
+    on: (obj) -> obj.msg.call this,{f1:123}
   }
 
 describe "event source wrapper", ->
@@ -38,7 +39,7 @@ describe "event source wrapper", ->
     
   it "should overload on", ->
     ctx.on msg:onSpy
-    expect(onSpy).toHaveBeenCalledWith(123)
+    expect(onSpy).toHaveBeenCalledWith(f1:123)
     
     
 describe "calling event source wrapper", ->
@@ -85,5 +86,27 @@ describe "loading from event source", ->
     ctx.on msg:->@publish msg:{id:1, f1:123}
     ctx.on msg:->@publish msg:{id:1, f1:456}
     
-    expect(storeSpy).toHaveBeenCalledWith('1/1/msg',{id:1,f1:123})
-    expect(storeSpy).toHaveBeenCalledWith('1/2/msg',{id:1,f1:456})
+    expect(storeSpy.callCount).toEqual(2)
+    expect(storeSpy).toHaveBeenCalledWith('1/1/msg',{id:1,f1:123,sequence:1})
+    expect(storeSpy).toHaveBeenCalledWith('1/2/msg',{id:1,f1:456,sequence:2})
+
+ describe "event source nested publish", ->
+
+  sequence = []
+  beforeEach ->
+    ctx.on = (obj) -> 
+      obj.msg?.call this,{f1:123}
+      obj.evnt1?.call this,{f1:123}
+      obj.evnt2?.call this,{f1:123}
+    ctx.publish = (obj) -> 
+      sequence.push(obj.evnt1?.sequence || obj.evnt2?.sequence)
+    repo = sut.apply ctx,[]
+  
+  it "should maintain sequence", ->
+    uuid=0
+    e1=null;e2=null
+    ctx.on msg:->@publish evnt1:{id:1, f1:123}
+    ctx.on evnt1:->@publish evnt2:{id:1, f1:456}
+    ctx.on evnt2:->
+
+    expect(sequence[0]<sequence[1]).toBe(true)
