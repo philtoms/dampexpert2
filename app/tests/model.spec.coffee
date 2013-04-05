@@ -182,10 +182,10 @@ describe "event sourced model state", ->
     sut.enable "eventsourcing"
     sut.extend m1:->
       @on cmd: ->
-        @publish evnt1:""
+        @publish evnt1:{}
       @on evnt1:(e)->
         @f1='abc'
-        @publish evnt2:""
+        @publish evnt2:{}
       @on evnt2:->
         expect(@f1).toEqual('abc')
     emit.cmd()

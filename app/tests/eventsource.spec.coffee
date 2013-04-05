@@ -2,17 +2,18 @@ path = require "path"
 injectr = require "injectr"
 
 storeSpy = createSpy("store")
-uuid=0
 
 sut = injectr "./src/eventsource.coffee",
-  'node-uuid':v1:->++uuid
   'memory-store':
       query:(id,cb)-> cb null,[
-        {'1/1/msg':{id:'1',f1:1}},
-        {'1/2/msg':{id:'1',f1:2}}
-      ]
+        {id:'1/1/msg',payload:{id:'1',f1:1}},
+        {id:'1/2/msg',payload:{id:'1',f1:2}},
+        {id:'2/1/evnt1',payload:{id:'1',f1:1}}
+        {id:'2/2/evnt2',payload:{id:'1',f1:2}}
+      ].filter (x) -> x.id[0]==''+id
       store:(id,event,cb)->
         storeSpy(id,event)
+      hasState:->false
   ,{
     console: console
   }
@@ -24,43 +25,38 @@ beforeEach ->
     app:
       get:createSpy("get").andReturn("memory-store")
     log:debug:->
-    publish:(obj) -> "x"
+    publish:->
     on: (obj) -> obj.msg.call this,{f1:123}
   }
 
 describe "event source wrapper", ->
  
+  repo = null
   onSpy = createSpy("on")
   beforeEach ->
-    sut.apply ctx,[]
+    repo = sut.apply ctx,[]
     
   it "should require model repository", ->
     expect(ctx.app.get).toHaveBeenCalled()
     
-  it "should overload on", ->
+  it "should wrap model on handler", ->
     ctx.on msg:onSpy
     expect(onSpy).toHaveBeenCalledWith(f1:123)
-    
-    
-describe "calling event source wrapper", ->
- 
-  repo = null
-  beforeEach ->
-    repo = sut.apply ctx,[]
-  
+        
   it "should return model repository interface", ->
     expect(repo.load).toBeDefined()
     expect(repo.store).toBeDefined()
 
-describe "loading from event source", ->
+describe "loading an aggregate from event source", ->
  
   eventSpy = createSpy("event")
   init = {f1:123}
   aggr = {}
   
   beforeEach ->
+    # initialize es with initial value and handlers
     repo = sut.apply ctx,[init,{msg:(e)->@f1=e.f1;eventSpy(e)}]
-    repo.load 1,(e,a) -> aggr=a
+    repo.load 1,(err,a) -> aggr=a
 
   it "should call event handlers in model context", ->
     expect(eventSpy.callCount).toEqual(2)
@@ -76,37 +72,54 @@ describe "loading from event source", ->
     expect(init.f1).toEqual(123)
  
  
- describe "event source publish", ->
+describe "event source publish events", ->
 
   beforeEach ->
     repo = sut.apply ctx,[]
-  
-  it "should store correctly formatted events", ->
-    uuid=0
-    ctx.on msg:->@publish msg:{id:1, f1:123}
-    ctx.on msg:->@publish msg:{id:1, f1:456}
-    
+    ctx.on msg:->@publish evnt1:{id:2, f1:123}
+    ctx.on msg:->@publish evnt2:{id:2, f1:456}
+      
+  it "should be stored correctly formatted", ->
     expect(storeSpy.callCount).toEqual(2)
-    expect(storeSpy).toHaveBeenCalledWith('1/1/msg',{id:1,f1:123,sequence:1})
-    expect(storeSpy).toHaveBeenCalledWith('1/2/msg',{id:1,f1:456,sequence:2})
+    expect(storeSpy).toHaveBeenCalledWith('2/1/evnt1',{id:'2/1/evnt1',payload:{id:2,f1:123}})
+    expect(storeSpy).toHaveBeenCalledWith('2/2/evnt2',{id:'2/2/evnt2',payload:{id:2,f1:456}})
 
- describe "event source nested publish", ->
 
-  sequence = []
+describe "reloaded event source publish events", ->
+
+  repo=null
+  hydratingCount=0
+  beforeEach ->
+    repo = sut.apply ctx,[{},{
+      evnt1:(e)->hydratingCount++ if @hydrating
+      evnt2:(e)->hydratingCount++ if @hydrating
+    }]
+      
+  it "should be in a hydrating state", ->
+
+    repo.load 2,->
+    expect(hydratingCount).toEqual(2)
+    
+  it "should not be restored when published", ->
+    ctx.on msg:->@hydrating=true;@publish evnt1:{id:2, f1:123}
+    ctx.on msg:->@hydrating=true;@publish evnt2:{id:2, f1:456}
+
+    expect(storeSpy.callCount).toEqual(0)
+    
+describe "nested event source publish events", ->
+
+  eventSpy = createSpy("event")
   beforeEach ->
     ctx.on = (obj) -> 
       obj.msg?.call this,{f1:123}
-      obj.evnt1?.call this,{f1:123}
-      obj.evnt2?.call this,{f1:123}
-    ctx.publish = (obj) -> 
-      sequence.push(obj.evnt1?.sequence || obj.evnt2?.sequence)
+      obj.evnt1?.call this,{f1:456}
+      obj.evnt2?.call this,{f1:789}
+    ctx.publish = eventSpy
+
     repo = sut.apply ctx,[]
   
-  it "should maintain sequence", ->
-    uuid=0
-    e1=null;e2=null
-    ctx.on msg:->@publish evnt1:{id:1, f1:123}
-    ctx.on evnt1:->@publish evnt2:{id:1, f1:456}
-    ctx.on evnt2:->
+  it "should not be called when hydrating", ->
+    ctx.on msg:->@publish evnt1:{id:2, f1:123}
+    ctx.on evnt1:->@hydrating=true;@publish evnt2:{id:2, f1:456}
 
-    expect(sequence[0]<sequence[1]).toBe(true)
+    expect(eventSpy.callCount).toEqual(1)
