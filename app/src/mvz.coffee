@@ -81,7 +81,7 @@ mvz = (startApp) ->
   base.include './model'
   base.include './log'
   
-  base.enable 'automap events'
+  @app.enable 'automap events'
   
   @app.set cqrs:'./ws-cqrs'
   @app.set eventsource:'./eventsource'
@@ -93,7 +93,7 @@ mvz = (startApp) ->
     loadQ.shift()()
     iocContainer.log.apply base, [base]
     
-    if base.enabled 'cqrs' 
+    if @enabled 'cqrs' 
       bus = require(@get 'bus')
       require(@get 'cqrs').call base, bus
       bus.log = base.log

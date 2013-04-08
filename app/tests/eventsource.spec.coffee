@@ -2,6 +2,7 @@ path = require "path"
 injectr = require "injectr"
 
 storeSpy = createSpy("store")
+setValues = {}
 
 sut = injectr "./src/eventsource.coffee",
   'memory-store':
@@ -24,6 +25,8 @@ beforeEach ->
   ctx = {
     app:
       get:createSpy("get").andReturn("memory-store")
+      enabled:(k) -> if setValues[k] then setValues[k] else false
+      enable:(k) -> setValues[k]=true
     log:debug:->
     publish:->
     on: (obj) -> obj.msg.call this,{f1:123}
@@ -34,7 +37,7 @@ describe "event source wrapper", ->
   repo = null
   onSpy = createSpy("on")
   beforeEach ->
-    repo = sut.apply ctx,[]
+    repo = sut.apply ctx,[{},{}]
     
   it "should require model repository", ->
     expect(ctx.app.get).toHaveBeenCalled()
@@ -75,7 +78,7 @@ describe "loading an aggregate from event source", ->
 describe "event source publish events", ->
 
   beforeEach ->
-    repo = sut.apply ctx,[]
+    repo = sut.apply ctx,[{},{}]
     ctx.on msg:->@publish evnt1:{id:2, f1:123}
     ctx.on msg:->@publish evnt2:{id:2, f1:456}
       
@@ -116,7 +119,7 @@ describe "nested event source publish events", ->
       obj.evnt2?.call this,{f1:789}
     ctx.publish = eventSpy
 
-    repo = sut.apply ctx,[]
+    repo = sut.apply ctx,[{},{}]
   
   it "should not be called when hydrating", ->
     ctx.on msg:->@publish evnt1:{id:2, f1:123}

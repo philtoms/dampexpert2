@@ -3,7 +3,8 @@ nextsequence=0
 module.exports = (init,handlers) ->
 
   models = models || require(@app.get 'model-store')
-
+  automap = @app.enabled 'automap events'
+  
   eventStore = {
     load:(id,cb)-> models.query id, (err,events) ->
       aggregate = {}
@@ -31,6 +32,8 @@ module.exports = (init,handlers) ->
       # effectively switched off during hydration
       if @hydrating then return
       for k, v of obj
+        if automap and not handlers[k]
+          k='automap'
         sequence=++nextsequence
         _publish.apply ctx,[obj,cb]
         eventid = "#{v.id}/#{sequence}/#{k}"

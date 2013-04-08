@@ -10,8 +10,6 @@ ctxSpy = createSpy 'zappa ctx'
 mvz = injectr "./src/mvz.coffee",  
   'zappajs':app: (fn) ->
       fn.call
-        enabled:->
-        enable:->
         get:getSpy
         app:
           ctx:ctxSpy
@@ -19,7 +17,8 @@ mvz = injectr "./src/mvz.coffee",
             listen:listenSpy
             address:->
           set:->
-          get:->
+          enabled:->
+          enable:->
           get:logSpy
           settings:env:'test'
           include:->

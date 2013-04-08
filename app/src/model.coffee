@@ -28,7 +28,7 @@ models = null
       
   @['on'] = (obj) ->
   
-    if not eventsourcing and base.enabled 'eventsourcing'
+    if not eventsourcing and base.app.enabled 'eventsourcing'
       # bind eventsource wrapper to this model
       models = require(base.app.get 'eventsource').apply this, [mapViewData(init),handlers]
       eventsourcing = true
@@ -55,8 +55,8 @@ models = null
               if not data then obj[msg] = {}
               obj[msg].id=id # no nonsense
               _publish.call model, obj,ack
-              if base.enabled('automap events') and not handlers[msg]
-                model = mapViewData(data,model)
+              if base.app.enabled('automap events') and not handlers[msg]
+                handlers.automap.call model, data
             models.store id,mapViewData(model)
             if _super.viewmodel then _super.viewmodel = mapViewData(model)
           # switch to model context in handlers

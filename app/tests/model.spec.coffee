@@ -7,9 +7,6 @@ setValues = {}
 mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),  
   'zappajs': app: (fn) ->
       fn.call
-        enabled:(k) -> if setValues[k] then setValues[k] else false
-        enable:(k) -> setValues[k]=true
-        disable:(k) -> if setValues[k] then setValues[k]=false
         all:->
         get:->
         on:(obj)->emit[k]=v for k,v of obj
@@ -19,6 +16,9 @@ mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),
             address:->
           set:(o)-> setValues[k]=v for k,v of o
           get:(k)-> setValues[k]
+          enabled:(k) -> if setValues[k] then setValues[k] else false
+          enable:(k) -> setValues[k]=true
+          disable:(k) -> if setValues[k] then setValues[k]=false
           settings:env:'test'
   ,{
     console: console
@@ -40,8 +40,8 @@ mvz 3001, (ready) ->
 emit.cmd()
 
 beforeEach ->
-  sut.enable 'automap events'
-  sut.disable "eventsourcing"
+  sut.app.enable 'automap events'
+  sut.app.disable "eventsourcing"
   sut.reset()
   sut.viewmodel={}
   vmodel=null
@@ -98,7 +98,7 @@ describe "publishing without an event handler with automap switched off", ->
 
   m2 = null
   beforeEach ->
-    sut.disable 'automap events'
+    sut.app.disable 'automap events'
     sut.extend m1:->
       @on cmd:->
         m2 = this
@@ -165,7 +165,7 @@ describe "model state", ->
 describe "invoking an event sourced model through a commanmd", ->
     
   it "should rehydrate its model state", ->
-    sut.enable "eventsourcing"
+    sut.app.enable "eventsourcing"
     sut.extend m1:->
       @on cmd1: ->
         @publish evnt:f1:'abc'
@@ -176,17 +176,16 @@ describe "invoking an event sourced model through a commanmd", ->
     emit.cmd1()
     emit.cmd2()
 
-describe "event sourced model state", ->
+describe "invoking an automapped event sourced model through a command", ->
     
-  it "should be maintained through command scope", ->
-    sut.enable "eventsourcing"
+  it "should rehydrate its model state", ->
+    sut.app.enable "eventsourcing"
     sut.extend m1:->
-      @on cmd: ->
-        @publish evnt1:{}
-      @on evnt1:(e)->
-        @f1='abc'
-        @publish evnt2:{}
-      @on evnt2:->
+      @on cmd1: ->
+        debugger
+        @publish evnt:f1:'abc'
+      @on cmd2:->
         expect(@f1).toEqual('abc')
-    emit.cmd()
+    emit.cmd1()
+    emit.cmd2()
 

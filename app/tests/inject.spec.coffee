@@ -4,9 +4,9 @@ injectr = require "injectr"
 mvz = injectr "./src/mvz.coffee",  
   'zappajs':app: (fn) ->
       fn.call
-        enabled:->
-        enable:->
         app:
+          enabled:->
+          enable:->
           set:->
   ,{
     console: console
