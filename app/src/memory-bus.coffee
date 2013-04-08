@@ -20,7 +20,7 @@ bus =
   publishEvent: (msg,data,ack,err) -> 
     queue.push {name:msg,data,err}
     ack?() # message received
-    pump()
+    process.nextTick(pump)
     
   subscribe: (msg,handler) -> 
     subscriber = {id:uuid.v4(),handle:handler}

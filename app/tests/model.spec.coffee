@@ -138,20 +138,25 @@ describe "a commanmd with an unknown id", ->
     expect(errors.pop()).toEqual(78)
     
 describe "invoking a model through a commanmd", ->
-    
-  it "should rehydrate its model state", ->
+
+  done=false
+  it "should rehydrate its model state", (next) ->
     sut.extend m1:->
       @on cmd1: ->
         @f1='abc'
         @publish evnt:""
       @on cmd2:->
         expect(@f1).toEqual('abc')
+        done=true
     emit.cmd1()
     emit.cmd2()
+    process.nextTick ->
+      if done then next()
 
 describe "model state", ->
     
-  it "should be maintained through command scope", ->
+  done=false
+  it "should be maintained through command scope", (next) ->
     sut.extend m1:->
       @on cmd: ->
         @publish evnt1:""
@@ -160,11 +165,15 @@ describe "model state", ->
         @publish evnt2:""
       @on evnt2:->
         expect(@f1).toEqual('abc')
+        done=true
     emit.cmd()
+    process.nextTick ->
+      if done then next()
 
 describe "invoking an event sourced model through a commanmd", ->
-    
-  it "should rehydrate its model state", ->
+ 
+  done=false
+  it "should rehydrate its model state", (next) ->
     sut.app.enable "eventsourcing"
     sut.extend m1:->
       @on cmd1: ->
@@ -173,19 +182,25 @@ describe "invoking an event sourced model through a commanmd", ->
         @f1=e.f1
       @on cmd2:->
         expect(@f1).toEqual('abc')
+        done=true
     emit.cmd1()
     emit.cmd2()
+    process.nextTick ->
+      if done then next()
 
 describe "invoking an automapped event sourced model through a command", ->
-    
-  it "should rehydrate its model state", ->
+
+  done = false
+  it "should rehydrate its model state", (next) ->
     sut.app.enable "eventsourcing"
     sut.extend m1:->
       @on cmd1: ->
-        debugger
         @publish evnt:f1:'abc'
       @on cmd2:->
         expect(@f1).toEqual('abc')
+        done=true
     emit.cmd1()
     emit.cmd2()
+    process.nextTick ->
+      if done then next()
 

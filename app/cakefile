@@ -20,6 +20,7 @@ task 'spec', (args) ->
       jasmine = cp.spawn "node", ["--debug-brk","../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
     else
       jasmine = cp.spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
+      # jasmine = cp.spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "--verbose", "tests"]
 
     jasmine.stdout.on "data", (data) ->
       process.stdout.write data
