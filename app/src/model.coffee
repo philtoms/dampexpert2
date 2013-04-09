@@ -1,7 +1,6 @@
 uuid = require('node-uuid')
 
 _publish=null
-models = null
 
 @include = model: (base,_super) ->
 
@@ -29,10 +28,11 @@ models = null
   @['on'] = (obj) ->
   
     if not eventsourcing and base.app.enabled 'eventsourcing'
-      # bind eventsource wrapper to this model
+      # bind a new eventsource wrapper to this model
       models = require(base.app.get 'eventsource').apply this, [mapViewData(init),handlers]
       eventsourcing = true
     else
+      # bind shared model store
       models = models || require(base.app.get 'model-store')
 
     for k,h of obj

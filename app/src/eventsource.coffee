@@ -1,48 +1,55 @@
-models=null
-nextsequence=0
 module.exports = (init,handlers) ->
 
+  buffer = []
   models = models || require(@app.get 'model-store')
+  log = @log
   automap = @app.enabled 'automap events'
   
+  nextsequence = 0
+  
   eventStore = {
-    load:(id,cb)-> models.query id, (err,events) ->
-      aggregate = {}
+    load:(id,cb)-> models.loadAll id, (err,events) ->
+      aggregate = {id:id}
       for k,v of init
         aggregate[k]=v
+        
+      sequence=0
       for e in (events.sort (a,b) -> a.id.split('/')[1] - b.id.split('/')[1])
         name = e.id.split('/')[2]
+        if automap and not handlers[name]
+          name='automap'
+
         if handlers[name]
+          sequence++
           aggregate.hydrating=true
           handlers[name].call aggregate,e.payload
           delete aggregate.hydrating
+        nextsequence = sequence if sequence>nextsequence
       cb null,aggregate
       
-    store:(model,cb)-> 
-      # cache the model?
-      models.store model,cb
+    store:(model,cb)->
+      for e in buffer
+        sequence=++nextsequence
+        for k, v of e
+          eventid = "#{v.id}/#{sequence}/#{k}"
+          log.debug "storing #{eventid}"
+          models.store eventid, {id:eventid,payload:v}
+
+      buffer=[]
   }
-  #nextsequence = models.query?
   
   _on = @on
   _publish = null
   @on = (obj) ->
     ctx = this
-    es_publish = (obj, cb) ->
-      # effectively switched off during hydration
+    es_publish = (obj) ->
+      # switched off during hydration
       if @hydrating then return
-      for k, v of obj
-        if automap and not handlers[k]
-          k='automap'
-        sequence=++nextsequence
-        _publish.apply ctx,[obj,cb]
-        eventid = "#{v.id}/#{sequence}/#{k}"
-        ctx.log.debug "storing #{eventid}"
-        models.store(eventid,{id:eventid,payload:v}, -> cb? v.id)
+      buffer.push obj
+      _publish.apply ctx,[obj]
 
-    router = (obj) ->
-      ctx.log.debug "es wrapping #{obj.message}"
-      
+    wrap = (obj) ->
+      log.debug "es wrapping #{obj.message}"      
       return (data) ->
         _publish = _publish || @publish
         @publish = es_publish
@@ -50,7 +57,7 @@ module.exports = (init,handlers) ->
                     
     es_handler = {}
     for k, v of obj
-      es_handler[k] = router {message:k,handler:v}
+      es_handler[k] = wrap {message:k,handler:v}
       _on.call ctx, es_handler
   
   return eventStore

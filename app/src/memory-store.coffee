@@ -1,6 +1,5 @@
 uuid = require('node-uuid')
-mstore = ->
-  cache = {}
+MStore = ->
   models = {}
   
   id: uuid.v4()
@@ -8,7 +7,7 @@ mstore = ->
   load: (id,cb) -> 
     cb null,models[id]
 
-  query: (id,cb) ->
+  loadAll: (id,cb) ->
     qr=[]
     for k,v of models
       if k.indexOf(id)==0
@@ -20,4 +19,4 @@ mstore = ->
     cb? null,id
 
 
-module.exports = new mstore
+module.exports = new MStore

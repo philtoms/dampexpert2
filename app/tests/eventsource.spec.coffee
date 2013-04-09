@@ -6,7 +6,7 @@ setValues = {}
 
 sut = injectr "./src/eventsource.coffee",
   'memory-store':
-      query:(id,cb)-> cb null,[
+      loadAll:(id,cb)-> cb null,[
         {id:'1/1/msg',payload:{id:'1',f1:1}},
         {id:'1/2/msg',payload:{id:'1',f1:2}},
         {id:'2/1/evnt1',payload:{id:'1',f1:1}}
@@ -38,6 +38,7 @@ describe "event source wrapper", ->
   onSpy = createSpy("on")
   beforeEach ->
     repo = sut.apply ctx,[{},{}]
+    repo.store()
     
   it "should require model repository", ->
     expect(ctx.app.get).toHaveBeenCalled()
@@ -81,13 +82,17 @@ describe "event source publish events", ->
     repo = sut.apply ctx,[{},{}]
     ctx.on msg:->@publish evnt1:{id:2, f1:123}
     ctx.on msg:->@publish evnt2:{id:2, f1:456}
+    repo.store()
       
   it "should be stored correctly formatted", ->
     expect(storeSpy.callCount).toEqual(2)
     expect(storeSpy).toHaveBeenCalledWith('2/1/evnt1',{id:'2/1/evnt1',payload:{id:2,f1:123}})
     expect(storeSpy).toHaveBeenCalledWith('2/2/evnt2',{id:'2/2/evnt2',payload:{id:2,f1:456}})
 
-
+  it "should be stored in sequence order", ->
+    expect(storeSpy.calls[0].args[0]).toEqual('2/1/evnt1')
+    expect(storeSpy.calls[1].args[0]).toEqual('2/2/evnt2')
+    
 describe "reloaded event source publish events", ->
 
   repo=null
@@ -111,6 +116,7 @@ describe "reloaded event source publish events", ->
     
 describe "nested event source publish events", ->
 
+  repo=null
   eventSpy = createSpy("event")
   beforeEach ->
     ctx.on = (obj) -> 
@@ -126,3 +132,12 @@ describe "nested event source publish events", ->
     ctx.on evnt1:->@hydrating=true;@publish evnt2:{id:2, f1:456}
 
     expect(eventSpy.callCount).toEqual(1)
+
+  it "should be stored in nested sequence order", ->
+    ctx.on msg:->@publish evnt1:{id:2, f1:123}
+    ctx.on evnt1:->debugger;@publish evnt2:{id:2, f1:456}    
+    repo.store()
+    
+    expect(storeSpy.calls[0].args[0]).toEqual('2/1/evnt1')
+    expect(storeSpy.calls[1].args[0]).toEqual('2/2/evnt2')
+    
