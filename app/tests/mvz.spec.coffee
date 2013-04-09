@@ -15,7 +15,7 @@ mvz = injectr "./src/mvz.coffee",
           ctx:ctxSpy
           server:
             listen:listenSpy
-            address:->
+            address:-> port:3001
           set:->
           enabled:->
           enable:->

@@ -7,4 +7,4 @@ for k,v of {'debug':0,'info':1,'warn':2,'error':3}
 
 @extend = inject: (base) ->
   @log = log
-  level= base.app.get 'loglevel' || 1
+  level = (base.app.get 'loglevel')? || 1
