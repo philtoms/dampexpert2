@@ -25,22 +25,36 @@ mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),
   }
 
 sut = null
-mvz 3001, (ready) ->
-  sut = this
-  @extend m1:model:->
-    @map f1:123
-    @map f2:456
-    @on cmd:->
-      @publish evnt:789
-  ready()
+done=false
+tloop = ->
+  if done
+    done() 
+  else 
+    process.nextTick tloop
 
-beforeEach ->
-  sut.reset()
-  
 describe "viewmodels", ->
- 
-  it "should subscribe to model events", ->
-    sut.extend viewmodel:->
-      @on evnt:(d)->
-        expect(d).toEqual(789)
+
+  beforeEach ->
+    done=false
+    mvz 3001, (ready) ->
+      @extend viewmodel:->
+        sut = this
+        @extend model:->
+          @map f1:123
+          @on cmd:->
+            @publish evnt:f1:789
+      ready()
+      
+  it "should subscribe to model events", (next) ->
+    sut.on evnt:(d)->
+      expect(d.f1).toEqual(789)
+      done=next
+    emit.cmd()
+    tloop()
+    
+  it "should auto-map onto the model viewmodel", (next) ->
+    sut.on evnt:->
+      expect(@viewmodel.f1).toEqual(789)
+      done=next
     emit.cmd()    
+    tloop()

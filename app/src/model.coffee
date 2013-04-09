@@ -3,7 +3,7 @@ uuid = require('node-uuid')
 _publish=null
 _models=null
 
-@include = model: (base,_super) ->
+@include = model: (base,container) ->
 
   models=null
   handlers={automap:(event) -> mapViewData(event,this)}
@@ -58,7 +58,7 @@ _models=null
               if base.app.enabled('automap events') and not handlers[msg]
                 handlers.automap.call model, data
             models.store id,mapViewData(model)
-            if _super.viewmodel then _super.viewmodel = mapViewData(model)
+            if container.viewmodel then mapViewData(model,container.viewmodel)
           # switch to model context in handlers
           handlers[k].call model,cmd
         unloadState id

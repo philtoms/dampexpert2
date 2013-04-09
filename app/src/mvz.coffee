@@ -53,15 +53,15 @@ mvz = (startApp) ->
           ctor.apply ctx
           return ctx
             
-        ctx = constructor: (_super) ->
+        ctx = constructor: (container) ->
           @name = name
           @app = base.app
           @[verb] = base[verb] for verb in ['include', 'extend']
           ioc.call this,base for k,ioc of iocContainer
           if extension
-            extension.apply this, [base,_super]
+            extension.apply this, [base,container]
           if typeof ctor is 'object'
-            return extend.call _super, ctor, this
+            return extend.call container, ctor, this
           ctor.apply this
           return this
           
@@ -98,7 +98,8 @@ mvz = (startApp) ->
       require(@get 'cqrs').call base, bus
       bus.log = base.log
       
-    fn() for fn in loadQ
+    while fn = loadQ.shift()
+      fn()
     onload = (fn) -> fn()
 
     @server.listen port || 3000
