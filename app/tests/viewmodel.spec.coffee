@@ -52,8 +52,9 @@ describe "viewmodels", ->
     emit.cmd()
     tloop()
     
-  it "should auto-map onto the model viewmodel", (next) ->
+  it "should auto-map onto locally scoped models", (next) ->
     sut.on evnt:->
+      debugger
       expect(@viewmodel.f1).toEqual(789)
       done=next
     emit.cmd()    

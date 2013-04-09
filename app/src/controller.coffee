@@ -1,6 +1,7 @@
 path = require('path')
 
 @include = controller: (base,_super) ->
+  @viewmodel = {}
   @route = [_super.route,@name].join('/')
   # zappa verbs are default route enabled
   for verb in ['get', 'post', 'put', 'del']

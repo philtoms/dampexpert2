@@ -120,13 +120,13 @@ describe "extension modules that extend extension point modules", ->
   it "should not extend extension point context", ->
     expect(_super.extendCtx).not.toBeDefined()
 
-describe "nested extention points", ->
+describe "nested s points", ->
   beforeEach ->
     sut.extend p1:viewmodel:-> @f1=1
     sut.extend p2:viewmodel:-> @f2=2
     sut.extend p3:viewmodel:-> @f3=3
     
-  it "should all be included in extenstion", ->
+  it "should all be included in extension", ->
     ext=null
     sut.extend p1:p2:p3:-> ext=this
     expect(ext.f1).toBeDefined()

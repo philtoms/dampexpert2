@@ -58,7 +58,7 @@ _models=null
               if base.app.enabled('automap events') and not handlers[msg]
                 handlers.automap.call model, data
             models.store id,mapViewData(model)
-            if container.viewmodel then mapViewData(model,container.viewmodel)
+            if container.viewmodel then container.viewmodel = mapViewData(model)
           # switch to model context in handlers
           handlers[k].call model,cmd
         unloadState id
