@@ -1,15 +1,16 @@
 uuid = require('node-uuid')
 
 _publish=null
+_models=null
 
 @include = model: (base,_super) ->
 
+  models=null
   handlers={automap:(event) -> mapViewData(event,this)}
   mappings={}
   init={}
   cache = {}
   modelId = uuid.v4()
-  eventsourcing=false
   
   loadState = (models,id,cb) ->
     if cache[id] 
@@ -27,13 +28,12 @@ _publish=null
       
   @['on'] = (obj) ->
   
-    if not eventsourcing and base.app.enabled 'eventsourcing'
-      # bind a new eventsource wrapper to this model
-      models = require(base.app.get 'eventsource').apply this, [mapViewData(init),handlers]
-      eventsourcing = true
+    if @eventsourcing
+      # bind a new eventsource wrapper to this model (once)
+      models = models || require('./eventstore').apply this, [mapViewData(init),handlers]
     else
-      # bind shared model store
-      models = models || require(base.app.get 'model-store')
+      # load global shared model store
+      models = _models = _models || require(base.app.get 'model-store')
 
     for k,h of obj
       handlers[k]=h

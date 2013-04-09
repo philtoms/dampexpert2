@@ -4,7 +4,7 @@ injectr = require "injectr"
 storeSpy = createSpy("store")
 setValues = {}
 
-sut = injectr "./src/eventsource.coffee",
+sut = injectr "./src/eventstore.coffee",
   'memory-store':
       loadAll:(id,cb)-> cb null,[
         {id:'1/1/msg',payload:{id:'1',f1:1}},
@@ -135,7 +135,7 @@ describe "nested event source publish events", ->
 
   it "should be stored in nested sequence order", ->
     ctx.on msg:->@publish evnt1:{id:2, f1:123}
-    ctx.on evnt1:->debugger;@publish evnt2:{id:2, f1:456}    
+    ctx.on evnt1:->@publish evnt2:{id:2, f1:456}    
     repo.store()
     
     expect(storeSpy.calls[0].args[0]).toEqual('2/1/evnt1')

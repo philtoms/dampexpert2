@@ -79,12 +79,12 @@ mvz = (startApp) ->
   base.include './controller'
   base.include './viewmodel'
   base.include './model'
+  base.include './eventsource'
   base.include './log'
   
   @app.enable 'automap events'
   
   @app.set cqrs:'./ws-cqrs'
-  @app.set eventsource:'./eventsource'
   @app.set bus:'./memory-bus'
   @app.set 'model-store':'./memory-store'
 

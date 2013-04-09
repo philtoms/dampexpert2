@@ -4,7 +4,7 @@ injectr = require "injectr"
 emit = {}
 setValues = {}
 
-mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),  
+mvz = injectr path.join(__dirname,"../src/mvz.coffee"),  
   'zappajs': app: (fn) ->
       fn.call
         all:->
@@ -41,10 +41,8 @@ emit.cmd()
 
 beforeEach ->
   sut.app.enable 'automap events'
-  sut.app.disable "eventsourcing"
   sut.reset()
   sut.viewmodel={}
-  vmodel=null
   
 describe "model state mappings", ->
  
@@ -70,11 +68,18 @@ describe "extended model", ->
   it "should override base model mappings", ->
     expect(m2.f2).toEqual('abc')
 
+describe "extended eventsource model", ->
+
+  it "should auto-enable eventsourcing", ->
+    sut.extend eventsource:m1:->
+      expect(@eventsourcing).toBeDefined()
+    
+    
 describe "included extended model", ->
 
   beforeEach ->
     sut.include '../tests/includes/extendmodel'
-    emit['excmd']()
+    emit.excmd()
     
   it "should be accessible in calling context", ->
     expect(sut.viewmodel.f1).toEqual('ex1')
@@ -174,8 +179,7 @@ describe "invoking an event sourced model through a commanmd", ->
  
   done=false
   it "should rehydrate its model state", (next) ->
-    sut.app.enable "eventsourcing"
-    sut.extend m1:->
+    sut.extend eventsource:m1:->
       @on cmd1: ->
         @publish evnt:f1:'abc'
       @on evnt:(e)->
@@ -192,8 +196,7 @@ describe "invoking an automapped event sourced model through a command", ->
 
   done = false
   it "should rehydrate its model state", (next) ->
-    sut.app.enable "eventsourcing"
-    sut.extend m1:->
+    sut.extend eventsource:m1:->
       @on cmd1: ->
         @publish evnt:f1:'abc'
       @on cmd2:->
