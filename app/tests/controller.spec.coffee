@@ -34,7 +34,7 @@ tloop = ->
   else 
     process.nextTick tloop
 
-describe "controllers", ->
+describe "controllers as containers", ->
 
   beforeEach ->
     done=false

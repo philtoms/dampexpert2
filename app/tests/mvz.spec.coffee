@@ -84,30 +84,29 @@ describe "included modules that override previosuly named extensions", ->
   it "should override existing members", ->
     expect(ctxSpy).toHaveBeenCalledWith(456)
     
-describe "extensions", ->
+describe "extended components without internal name", ->
   _ext=null
   beforeEach ->
-    sut.include '../tests/includes/includeextension'
+    sut.include '../tests/includes/extendedcomponent'
     _ext = ctxSpy.calls[0].args[0]
 
-  it "should be named", ->
-    expect(_ext.name).toEqual('includeextension')
+  it "should be named by file name convention", ->
+    expect(_ext.name).toEqual('extendedcomponent')
     
-describe "extensions with name overrides", ->
-  _ext=null
+describe "extended components with internal names", ->
   beforeEach ->
-    sut.include '../tests/includes/includeextensionwithnameoverride'
-    _ext = ctxSpy.calls[0].args[0]
+    debugger
+    sut.include '../tests/includes/extendedcomponentwithinternalname'
 
-  it "should have the override name", ->
-    expect(_ext.name).toEqual('nameoverride')
+  it "should have the internal name value as a property", ->
+    expect(ctxSpy.calls[0].args[0].name).toEqual('extendedcomponentwithinternalname')
     
-describe "extension modules that extend extension point modules", ->
+describe "components that extend registered components", ->
   _super=null
   _child=null
   beforeEach ->
-    sut.include '../tests/includes/includeextension'
-    sut.include '../tests/includes/extendincludeextension'
+    sut.include '../tests/includes/extendedcomponent'
+    sut.include '../tests/includes/extendregisteredcomponent'
     _super = ctxSpy.calls[0].args[0]
     _child = ctxSpy.calls[1].args[0]
 
@@ -120,35 +119,42 @@ describe "extension modules that extend extension point modules", ->
   it "should not extend extension point context", ->
     expect(_super.extendCtx).not.toBeDefined()
 
-describe "nested s points", ->
+describe "nested extension points", ->
+  nameSpy = createSpy('name')
   beforeEach ->
-    sut.extend p1:viewmodel:-> @f1=1
-    sut.extend p2:viewmodel:-> @f2=2
-    sut.extend p3:viewmodel:-> @f3=3
+    sut.extend ext1:viewmodel:-> @p1=1;nameSpy @name
+    sut.extend ext2:viewmodel:-> @p2=2;nameSpy @name
+    sut.extend ext3:viewmodel:-> @p3=3;nameSpy @name
     
-  it "should all be included in extension", ->
+  it "should progresively update the component name", ->
+    sut.extend ext1:ext2:ext3:->
+    expect(nameSpy).toHaveBeenCalledWith('ext1')
+    expect(nameSpy).toHaveBeenCalledWith('ext2')
+    expect(nameSpy).toHaveBeenCalledWith('ext3')
+
+  it "should all be included in the component", ->
     ext=null
-    sut.extend p1:p2:p3:-> ext=this
-    expect(ext.f1).toBeDefined()
-    expect(ext.f2).toBeDefined()
-    expect(ext.f3).toBeDefined()
+    sut.extend ext1:ext2:ext3:-> ext=this
+    expect(ext.p1).toBeDefined()
+    expect(ext.p2).toBeDefined()
+    expect(ext.p3).toBeDefined()
 
 describe "registered components", ->
   beforeEach ->
-    sut.include '../tests/includes/newcomponent'
+    sut.include '../tests/includes/registeredcomponent'
     
   it "should be extensible", ->
     ext=null
-    sut.extend newcomponent:-> ext=this
+    sut.extend registeredcomponent:-> ext=this
     expect(ext.f1).toEqual(1)
 
-describe "registered override components", ->
+describe "registered components that override previouly registered components", ->
   beforeEach ->
-    sut.include '../tests/includes/newcomponent'
-    sut.include '../tests/includes/overridecomponent'
+    sut.include '../tests/includes/registeredcomponent'
+    sut.include '../tests/includes/overrideregisteredcomponent'
     
   it "should be extensible", ->
     ext=null
-    sut.extend newcomponent:-> ext=this
+    sut.extend registeredcomponent:-> ext=this
     expect(ext.f1).toEqual(2)
 

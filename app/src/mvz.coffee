@@ -36,8 +36,12 @@ mvz = (startApp) ->
     return
 
   @extend = (obj) ->
-    extend = (obj, ctx) ->
+    extend = (obj, ctx, nestName) ->
       for name,ctor of obj
+
+        if name == nestName
+          return extend.call this, ctor, ctx, name
+          
         if name is 'inject'
           iocContainer[ctx?.name || 'ioc'+iocContainer.length] = ctor
           return ctx
@@ -49,7 +53,7 @@ mvz = (startApp) ->
           else
             ctx.name = name
           if typeof ctor is 'object'
-            return extend.call this, ctor, ctx
+            return extend.call this, ctor, ctx, name
           ctor.apply ctx
           return ctx
             
@@ -61,7 +65,7 @@ mvz = (startApp) ->
           if extension
             extension.apply this, [base,container]
           if typeof ctor is 'object'
-            return extend.call container, ctor, this
+            return extend.call container, ctor, this, name
           ctor.apply this
           return this
           
