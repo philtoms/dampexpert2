@@ -7,15 +7,13 @@ notReadySpy = createSpy "not ready"
 getSpy = createSpy 'get'
 ctxSpy = createSpy 'zappa ctx'
 
-mvz = injectr "./src/mvz.coffee",  
+mvz = injectr path.join(__dirname,"../lib/mvz.js"),  
   'zappajs':app: (fn) ->
       fn.call
         get:getSpy
         app:
           ctx:ctxSpy
-          server:
-            listen:listenSpy
-            address:-> port:3001
+          listen:listenSpy
           set:->
           enabled:->
           enable:->
@@ -24,7 +22,7 @@ mvz = injectr "./src/mvz.coffee",
           include:->
   ,{
     console: console
-    module:parent:filename:path.join(__dirname,"../src/x")
+    module:parent:filename:path.join(__dirname,"../x")
     __filename:__filename
     __dirname:__dirname
   }
@@ -33,7 +31,7 @@ sut = null
 beforeEach ->
   getSpy.reset()
   ctxSpy.reset()
-  mvz 3001, (ready) ->
+  mvz (ready) ->
     sut = this
     if not listenSpy.callCount then notReadySpy()
     ready()
@@ -52,7 +50,7 @@ describe "intitialized application", ->
 describe "ready application", ->
 
   it "should be listening on expected port", ->
-    expect(listenSpy).toHaveBeenCalledWith(3001)
+    expect(listenSpy).toHaveBeenCalledWith(3000)
 
   it "should have established logging", ->
     expect(logSpy).toHaveBeenCalledWith('loglevel')
@@ -60,7 +58,7 @@ describe "ready application", ->
 describe "included zappa modules", ->
 
   beforeEach ->
-    sut.include '../tests/includes/includezappa'
+    sut.include '../app/tests/includes/includezappa'
     
   it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.app.ctx).toHaveBeenCalledWith(sut)
@@ -68,7 +66,7 @@ describe "included zappa modules", ->
 describe "nested zappa modules included in previously included modules", ->
 
   beforeEach ->
-    sut.include '../tests/includes/includenested'
+    sut.include '../app/tests/includes/includenested'
     
   it "should be in mvz context with immediate access to zappa members", ->
     expect(sut.app.ctx).toHaveBeenCalledWith(sut)
@@ -79,7 +77,7 @@ describe "included modules that override previosuly named extensions", ->
     sut.extend x:controller:-> 
       @val = 123
       @ctx = -> @app.ctx @val
-    sut.include '../tests/includes/includeoverride'
+    sut.include '../app/tests/includes/includeoverride'
     
   it "should override existing members", ->
     expect(ctxSpy).toHaveBeenCalledWith(456)
@@ -87,7 +85,7 @@ describe "included modules that override previosuly named extensions", ->
 describe "extended components without internal name", ->
   _ext=null
   beforeEach ->
-    sut.include '../tests/includes/extendedcomponent'
+    sut.include '../app/tests/includes/extendedcomponent'
     _ext = ctxSpy.calls[0].args[0]
 
   it "should be named by file name convention", ->
@@ -95,8 +93,7 @@ describe "extended components without internal name", ->
     
 describe "extended components with internal names", ->
   beforeEach ->
-    debugger
-    sut.include '../tests/includes/extendedcomponentwithinternalname'
+    sut.include '../app/tests/includes/extendedcomponentwithinternalname'
 
   it "should have the internal name value as a property", ->
     expect(ctxSpy.calls[0].args[0].name).toEqual('extendedcomponentwithinternalname')
@@ -105,8 +102,8 @@ describe "components that extend registered components", ->
   _super=null
   _child=null
   beforeEach ->
-    sut.include '../tests/includes/extendedcomponent'
-    sut.include '../tests/includes/extendregisteredcomponent'
+    sut.include '../app/tests/includes/extendedcomponent'
+    sut.include '../app/tests/includes/extendregisteredcomponent'
     _super = ctxSpy.calls[0].args[0]
     _child = ctxSpy.calls[1].args[0]
 
@@ -141,7 +138,7 @@ describe "nested extension points", ->
 
 describe "registered components", ->
   beforeEach ->
-    sut.include '../tests/includes/registeredcomponent'
+    sut.include '../app/tests/includes/registeredcomponent'
     
   it "should be extensible", ->
     ext=null
@@ -150,8 +147,8 @@ describe "registered components", ->
 
 describe "registered components that override previouly registered components", ->
   beforeEach ->
-    sut.include '../tests/includes/registeredcomponent'
-    sut.include '../tests/includes/overrideregisteredcomponent'
+    sut.include '../app/tests/includes/registeredcomponent'
+    sut.include '../app/tests/includes/overrideregisteredcomponent'
     
   it "should be extensible", ->
     ext=null

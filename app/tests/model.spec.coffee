@@ -2,34 +2,32 @@ path = require "path"
 injectr = require "injectr"
 
 emit = {}
-setValues = {}
+setValues = env:'test'
 
-mvz = injectr path.join(__dirname,"../src/mvz.coffee"),  
+mvz = injectr path.join(__dirname,"../lib/mvz.js"),  
   'zappajs': app: (fn) ->
       fn.call
         all:->
         get:->
         on:(obj)->emit[k]=v for k,v of obj
         app:
-          server:
-            listen:->
-            address:-> port:3001
-          set:(o)-> setValues[k]=v for k,v of o
+          listen:->
+          settings:setValues
+          set:(k,v)-> setValues[k]=v
           get:(k)-> setValues[k]
           enabled:(k) -> if setValues[k] then setValues[k] else false
           enable:(k) -> setValues[k]=true
           disable:(k) -> if setValues[k] then setValues[k]=false
-          settings:env:'test'
   ,{
     console: console
-    module:parent:filename:path.join(__dirname,"../src/x")
+    module:parent:filename:path.join(__dirname,"../x")
     __filename:__filename
     __dirname:__dirname
   }
 
 sut = null
 m1=null
-mvz 3001, (ready) ->
+mvz (ready) ->
   sut = this
   @extend m1:'model':->
     @map f1:123
@@ -78,7 +76,7 @@ describe "extended eventsource model", ->
 describe "included extended model", ->
 
   beforeEach ->
-    sut.include '../tests/includes/extendmodel'
+    sut.include '../app/tests/includes/extendmodel'
     emit.excmd()
     
   it "should be accessible in calling context", ->

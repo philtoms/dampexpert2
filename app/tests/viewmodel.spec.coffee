@@ -2,24 +2,22 @@ path = require "path"
 injectr = require "injectr"
 
 emit = {}
-setValues = {}
-
-mvz = injectr.call this, path.join(__dirname,"../src/mvz.coffee"),  
+setValues = env:'test'
+ 
+mvz = injectr.call this, path.join(__dirname,"../lib/mvz.js"),  
   'zappajs': app: (fn) ->
       fn.call
         on:(obj)->emit[k]=v for k,v of obj
         app:
-          server:
-            listen:->
-            address:-> port:3001
-          set:(o)-> setValues[k]=v for k,v of o
+          listen:->
+          set:(k,v)-> setValues[k]=v
           get:(k)-> setValues[k]
           enabled:(k) -> if setValues[k] then setValues[k] else false
           enable:(k) -> setValues[k]=true
-          settings:env:'test'
+          settings:setValues
   ,{
     console: console
-    module:parent:filename:path.join(__dirname,"../src/x")
+    module:parent:filename:path.join(__dirname,"../x")
     __filename:__filename
     __dirname:__dirname
   }
@@ -36,7 +34,7 @@ describe "viewmodels", ->
 
   beforeEach ->
     done=false
-    mvz 3001, (ready) ->
+    mvz (ready) ->
       @extend viewmodel:->
         sut = this
         @extend model:->

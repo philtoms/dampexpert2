@@ -9,7 +9,6 @@ module.exports = (bus) ->
         obj.handler.call ctx, data,err
         
       return (data) ->
-
         ack = @ack? =>
           @ack {message:obj.message,time:new Date}
 

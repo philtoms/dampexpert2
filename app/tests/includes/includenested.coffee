@@ -1,2 +1,2 @@
 @include = ->
-  @include '../tests/includes/include'
+  @include '../app/tests/includes/include'

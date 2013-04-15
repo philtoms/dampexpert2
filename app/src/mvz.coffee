@@ -80,17 +80,18 @@ mvz = (startApp) ->
   onload = (fn) ->
     loadQ.push fn
     
-  base.include './controller'
-  base.include './viewmodel'
-  base.include './model'
-  base.include './eventsource'
-  base.include './log'
+  base.include './lib/controller'
+  base.include './lib/viewmodel'
+  base.include './lib/model'
+  base.include './lib/eventsource'
+  base.include './lib/log'
   
+  @app.enable 'cqrs'
   @app.enable 'automap events'
   
-  @app.set cqrs:'./ws-cqrs'
-  @app.set bus:'./memory-bus'
-  @app.set 'model-store':'./memory-store'
+  @app.set 'cqrs','./ws-cqrs'
+  @app.set 'bus','./memory-bus'
+  @app.set 'model-store','./memory-store'
 
   ready = (port) ->
   
@@ -98,21 +99,24 @@ mvz = (startApp) ->
     iocContainer.log.apply base, [base]
     
     if @enabled 'cqrs' 
-      bus = require(@get 'bus')
-      require(@get 'cqrs').call base, bus
+      bus = require(@settings['bus'])
+      require(@settings['cqrs']).call base, bus
       bus.log = base.log
       
     while fn = loadQ.shift()
       fn()
     onload = (fn) -> fn()
 
-    @server.listen port || 3000
-    base.log.info 'Express server listening on port %d in %s mode',
-      @server.address()?.port, @settings.env
+    @listen port
+    base.log.info 'Express server listening on port %d in %s mode',port, @settings.env
       
   startApp.apply this, [ready]
     
 module.exports = (port,app) -> 
+  if not app
+    app = port
+    port = 3000
+    
   # wire-up mvz and the app into zappa context and start app when ready
   zappa.app -> 
     zapp = this

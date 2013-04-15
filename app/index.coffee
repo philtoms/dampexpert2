@@ -1,9 +1,2 @@
-dampexpert2 = require './lib/mvz' 3001, (ready) ->
+module.exports = require('./lib/mvz')
 
-  @use logging:require ('winston')
-      'defultRouting',
-      'eventSourcing'
-  
-  ready()
-  
-module.exports = dampexpert2

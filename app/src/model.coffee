@@ -27,13 +27,12 @@ _models=null
     if cache[id].ref<1 then delete cache[id]
       
   @['on'] = (obj) ->
-  
     if @eventsourcing
       # bind a new eventsource wrapper to this model (once)
       models = models || require('./eventstore').apply this, [mapViewData(init),handlers]
     else
       # load global shared model store
-      models = _models = _models || require(base.app.get 'model-store')
+      models = _models = _models || require(base.app.settings['model-store'])
 
     for k,h of obj
       handlers[k]=h

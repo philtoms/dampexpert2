@@ -1,6 +1,5 @@
 (function() {
-  var fs, mvz, path, zappa,
-    __slice = Array.prototype.slice;
+  var fs, mvz, path, zappa;
 
   fs = require('fs');
 
@@ -8,163 +7,146 @@
 
   zappa = require('zappajs');
 
-  mvz = function(ready) {
-    var base, basename, extensions, root, routes;
-    this.version = '0.1.1';
-    root = path.dirname(module.parent.filename);
+  mvz = function(startApp) {
+    var base, basename, bus, extensions, iocContainer, loadQ, onload, ready, root;
+    this.version = '0.1.2';
     base = this;
-    base.app.set("views", path.join(root, "views"));
+    root = path.dirname(module.parent.filename);
     basename = function(name) {
       return path.basename(path.basename(name || __filename, '.coffee'), '.js');
     };
-    routes = {};
+    bus = null;
     extensions = {};
-    base.all({
-      "*?*": function() {
-        var m, name, route;
-        name = this.params[0].split('/')[1];
-        route = '/' + name;
-        if (!routes[route]) m = base.include(route);
-        if (typeof m === 'function') {
-          (function(name) {
-            var view;
-            base.extend({
-              controller: function() {
-                this.get(function() {
-                  return view[name] = this.model();
-                });
-                return this(render(view));
-              }
-            }, route);
-            return view = {};
-          })(name);
-        }
-        return this.next();
-      }
-    });
-    this.registerRoutes = function(r) {
-      var route, _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = r.length; _i < _len; _i++) {
-        route = r[_i];
-        _results.push(this.include(r));
-      }
-      return _results;
-    };
-    extensions['controller'] = function(filepath, route) {
-      var ctx, mpath, name, verb, _fn, _i, _j, _len, _len2, _ref, _ref2;
-      name = filepath != null ? basename(filepath) : '';
-      if ((route != null) && name) name = '/' + name;
-      this.route = this.includepath = route != null ? route + name : name;
-      ctx = this;
-      ctx.app = base;
-      _ref = ['include', 'extend'];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        verb = _ref[_i];
-        ctx[verb] = base[verb];
-      }
-      _ref2 = ['get', 'post', 'put', 'del'];
-      _fn = function(verb) {
-        return ctx[verb] = function() {
-          var args, handler, r, subroute, _results;
-          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-          base.log("registering " + this.route);
-          if (args.length === 1) {
-            r = args[0];
-            if (typeof r !== 'object') {
-              r = {
-                '': args[0]
-              };
-            }
-            _results = [];
-            for (subroute in r) {
-              handler = r[subroute];
-              _results.push(base[verb](this.route + subroute, handler));
-            }
-            return _results;
-          } else {
-            return base[verb](this.route + args[0], args[1]);
-          }
-        };
-      };
-      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-        verb = _ref2[_j];
-        _fn(verb);
-      }
-      if (this.route.indexOf('/') !== 0) this.route = '/' + this.route;
-      routes[this.route] = {
-        controller: this.constructor,
-        filepath: filepath
-      };
-      mpath = path.join('models', this.includepath, name);
-      return this;
-    };
-    extensions['model'] = function(filepath, route) {
-      var ctx, name, verb, _i, _len, _ref;
-      name = filepath != null ? basename(filepath) : '';
-      ctx = this;
-      ctx.app = base;
-      _ref = ['io', 'on', 'include', 'extend'];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        verb = _ref[_i];
-        ctx[verb] = base[verb];
-      }
-      if ((route != null) && name) name = '/' + name;
-      return this.route = this.includepath = route != null ? route + name : name;
-    };
+    iocContainer = {};
+    loadQ = [];
     this.include = function(name) {
-      var ctx, k, sub, v, _ref, _ref2;
-      if (typeof name === 'object') {
-        for (k in name) {
-          v = name[k];
-          ctx = this.include(v);
-          if ((_ref = this.extensions) != null) _ref[k] = ctx;
-        }
-        return (_ref2 = this.extensions) != null ? _ref2[k] : void 0;
+      var k, obj, sub, v, _ref;
+      obj = name;
+      if (typeof obj !== 'object') {
+        obj = {};
+        obj[basename(name)] = name;
       }
-      sub = require(path.join(root, name));
-      if (sub.include) {
-        if (typeof sub.include === 'object') {
-          return this.extend(sub.include, name);
-        } else {
-          return sub.include.apply(this, [this]);
-        }
-      }
-    };
-    this.extend = function(obj, name) {
-      var ctx, k, v, _super;
-      this.extensions = this.extensions || {};
       for (k in obj) {
         v = obj[k];
-        if (typeof v === 'object') return this.extend(v, k);
-        _super = this.extensions[k] || extensions[k];
-        if (_super) {
+        sub = require(path.join(root, v));
+        if (sub.extend) {
+          obj[k] = sub.extend;
+          this.extend(obj);
+        }
+        if (sub.include) {
+          if (typeof sub.include === 'object') {
+            _ref = sub.include;
+            for (k in _ref) {
+              v = _ref[k];
+              extensions[k] = v;
+            }
+            return;
+          }
+          sub.include.apply(this);
+        }
+      }
+    };
+    this.extend = function(obj) {
+      var extend,
+        _this = this;
+      extend = function(obj, ctx, nestName) {
+        var ctor, extension, name;
+        for (name in obj) {
+          ctor = obj[name];
+          if (name === nestName) return extend.call(this, ctor, ctx, name);
+          if (name === 'inject') {
+            iocContainer[(ctx != null ? ctx.name : void 0) || 'ioc' + iocContainer.length] = ctor;
+            return ctx;
+          }
+          extension = extensions[name];
+          if (ctx) {
+            if (extension) {
+              extension.apply(ctx, [base, this]);
+            } else {
+              ctx.name = name;
+            }
+            if (typeof ctor === 'object') {
+              return extend.call(this, ctor, ctx, name);
+            }
+            ctor.apply(ctx);
+            return ctx;
+          }
           ctx = {
-            constructor: function() {
-              _super.call(this);
-              v.call(this);
+            constructor: function(container) {
+              var ioc, k, verb, _i, _len, _ref;
+              this.name = name;
+              this.app = base.app;
+              _ref = ['include', 'extend'];
+              for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+                verb = _ref[_i];
+                this[verb] = base[verb];
+              }
+              for (k in iocContainer) {
+                ioc = iocContainer[k];
+                ioc.call(this, base);
+              }
+              if (extension) extension.apply(this, [base, container]);
+              if (typeof ctor === 'object') {
+                return extend.call(container, ctor, this, name);
+              }
+              ctor.apply(this);
               return this;
             }
           };
-          this.extensions[basename(name)] = ctx.constructor;
-          return new ctx.constructor;
+          if (!extensions[name]) extensions[name] = ctx.constructor;
+          return new ctx.constructor(this);
         }
-      }
+      };
+      onload(function() {
+        return extend.call(_this, obj);
+      });
     };
-    ready.apply(this);
-    return this;
+    onload = function(fn) {
+      return loadQ.push(fn);
+    };
+    base.include('./lib/controller');
+    base.include('./lib/viewmodel');
+    base.include('./lib/model');
+    base.include('./lib/eventsource');
+    base.include('./lib/log');
+    this.app.enable('cqrs');
+    this.app.enable('automap events');
+    this.app.set('cqrs', './ws-cqrs');
+    this.app.set('bus', './memory-bus');
+    this.app.set('model-store', './memory-store');
+    ready = function(port) {
+      var fn;
+      loadQ.shift()();
+      iocContainer.log.apply(base, [base]);
+      if (this.enabled('cqrs')) {
+        bus = require(this.settings['bus']);
+        require(this.settings['cqrs']).call(base, bus);
+        bus.log = base.log;
+      }
+      while (fn = loadQ.shift()) {
+        fn();
+      }
+      onload = function(fn) {
+        return fn();
+      };
+      this.listen(port);
+      return base.log.info('Express server listening on port %d in %s mode', port, this.settings.env);
+    };
+    return startApp.apply(this, [ready]);
   };
 
   module.exports = function(port, app) {
+    if (!app) {
+      app = port;
+      port = 3000;
+    }
     return zappa.app(function() {
-      var ready, zapp;
+      var startApp, zapp;
       zapp = this;
-      return mvz.call(zapp, ready = function() {
-        return app.call(zapp, ready = function() {
-          var _ref;
-          zapp.server.listen(port || 3000);
-          zapp.log = zapp.log || function() {};
-          return zapp.log('Express server listening on port %d in %s mode', (_ref = zapp.server.address()) != null ? _ref.port : void 0, zapp.app.settings.env);
+      return mvz.call(zapp, startApp = function(ready) {
+        var startServer;
+        return app.call(zapp, startServer = function() {
+          return ready.call(zapp.app, port);
         });
       });
     });

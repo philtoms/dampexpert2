@@ -1,7 +1,7 @@
 path = require "path"
 injectr = require "injectr"
 
-mvz = injectr "./src/mvz.coffee",  
+mvz = injectr path.join(__dirname,"../lib/mvz.js"),  
   'zappajs':app: (fn) ->
       fn.call
         app:
@@ -10,11 +10,11 @@ mvz = injectr "./src/mvz.coffee",
           set:->
   ,{
     console: console
-    module:parent:filename:path.join(__dirname,"../src/x")
+    module:parent:filename:path.join(__dirname,"../x")
   }
-
+  
 sut = null
-mvz 3001, (ready) ->
+mvz (ready) ->
   sut = this
 
 describe "ioc container", ->
@@ -25,7 +25,7 @@ describe "ioc container", ->
       expect(@x).toBeDefined()
       
   it "should inject included ioc extensions", ->
-    sut.include '../tests/includes/includeinject'
+    sut.include '../app/tests/includes/includeinject'
     sut.extend viewmodel:->
       expect(@x).toBeDefined()
       

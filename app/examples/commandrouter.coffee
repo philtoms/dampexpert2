@@ -1,28 +1,22 @@
-require('zappajs') ->
-
-  @include '../lib/wscqrs'
-  @include '../lib/eventsource'
+app = require('../') 
+app (ready) ->
 
   @get '/': ->
     @render index: {layout: no}
      
-  # model
-  _on = @on
-  @on = (obj) ->
-    _on obj
+  @extend model:->
+    @on command: ->
+      msg = "command #{@data.text} handled!"
+      console.log msg
+      @publish event: "bought!"
     
-  @on command: ->
-    msg = "command #{@data.text} handled!"
-    console.log msg
-    @publish event: "bought!"
+    @on event : ->
+      msg = "event #{@data} handled!"
+      console.log msg
     
-  @on event : ->
-    msg = "event #{@data} handled!"
-    console.log msg
-    
-  @on event : ->
-    msg = "event #{@data} handled again!"
-    console.log msg
+    @on event : ->
+      msg = "event #{@data} handled again!"
+      console.log msg
     
   @client '/index.js': ->
     @connect()
@@ -45,3 +39,5 @@ require('zappajs') ->
       body ->
         div "Hello Susie!!"
         div id: 'panel'
+        
+  ready()

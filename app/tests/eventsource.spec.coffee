@@ -3,8 +3,8 @@ injectr = require "injectr"
 
 storeSpy = createSpy("store")
 setValues = {}
-
-sut = injectr "./src/eventstore.coffee",
+ 
+sut = injectr "./lib/eventstore.js",
   'memory-store':
       loadAll:(id,cb)-> cb null,[
         {id:'1/1/msg',payload:{id:'1',f1:1}},

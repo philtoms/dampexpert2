@@ -1,43 +1,50 @@
 flour = require 'flour'
-cp    = require 'child_process'
+{spawn} = require 'child_process'
 
 task 'build:coffee', ->
-    compile 'src/*.coffee', 'lib/'
+  compile 'src/*.coffee', 'lib/'
+  compile 'tests/*.coffee', 'lib/'
+  compile 'tests/includes/*.coffee', 'lib/'
 
 task 'build', ->
-    invoke 'build:coffee'
+  invoke 'build:coffee'
 
-task 'watch:server', ->
-    invoke 'build:coffee'
-    flour.minifiers['js'] = null
-    watch 'src/*.coffee', -> invoke 'build:coffee'
-
+task 'examples', ->
+  coffee = spawn "coffee", ["./exampless/commandrouter.coffee"]
+  coffee.stdout.on 'data', (data) ->
+    process.stdout.write data
+  watch ['src','examples'], -> invoke 'examples',
+    
 task 'spec', (args) ->
-    header()
-    #invoke 'build:coffee'
+  header()
+  invoke 'build'
+  
+  if args.arguments[0]=='dbg'
+    jasmine = spawn "node", ["--debug-brk","../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
+  else
+    jasmine = spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
+    # jasmine = spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "--verbose", "tests"]
 
-    if args.arguments[0]=='dbg'
-      jasmine = cp.spawn "node", ["--debug-brk","../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
-    else
-      jasmine = cp.spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "tests"]
-      # jasmine = cp.spawn "node", ["../node_modules/jasmine-node/lib/jasmine-node/cli.js", "--coffee", "--verbose", "tests"]
+  jasmine.stdout.on "data", (data) ->
+    process.stdout.write data
+  jasmine.stderr.on "data", (data) ->
+    process.stderr.write data
 
-    jasmine.stdout.on "data", (data) ->
-      process.stdout.write data
-    jasmine.stderr.on "data", (data) ->
-      process.stderr.write data
-
-    jasmine.stdin.end()
+  jasmine.stdin.end()
 
 task 'auto', ->
-    flour.minifiers['js'] = null
-    invoke 'spec'
-    watch ['src','tests'], -> invoke 'spec'
+  flour.minifiers['js'] = null
+  invoke 'spec'
+  watch ['src','tests'], -> invoke 'spec'
 
 task 'dbg', ->
-    flour.minifiers['js'] = null
-    invoke 'spec'
-    watch ['src','tests'], -> invoke 'spec',
+  flour.minifiers['js'] = null
+  invoke 'spec'
+  watch ['src','tests'], -> invoke 'spec',
+
+task 'run', ->
+  invoke 'examples'
+  watch ['src','examples'], -> invoke 'examples',
 
 header = ->
   divider = "------------"
